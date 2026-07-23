@@ -120,7 +120,7 @@ Variables (documentadas en **.env_default** y **.env.example**, deben mantenerse
 
 - `BOOTSTRAP_ADMIN_*` solo se usan para inicializar una instalación sin `storage/.users.json`.
 - `storage/settings.json` (rutas elegidas en Administración) prevalece sobre las rutas de medios de `.env` en tiempo de ejecución.
-- Requiere en el servidor: PHP 8+, extensiones JSON/Zip/OpenSSL/Intl, Apache con `mod_rewrite` y `AllowOverride All`, FFmpeg + FFprobe en `PATH`, permisos de lectura/escritura sobre las bibliotecas y sobre `storage/`.
+- Requiere en el servidor: PHP 8+, extensiones JSON/Zip/OpenSSL, Apache con `mod_rewrite` y `AllowOverride All`, FFmpeg + FFprobe en `PATH`, permisos de lectura/escritura sobre las bibliotecas y sobre `storage/`. No depender de la extensión `intl`: no está instalada en el servidor real y su uso (`IntlDateFormatter`) provocaba un error fatal no capturado que rompía la vista de Documentos entera (ver nota abajo). Usar `date()` nativo para formatear fechas.
 
 ## Notas importantes
 
@@ -133,4 +133,5 @@ Variables (documentadas en **.env_default** y **.env.example**, deben mantenerse
 - `Turnstile::verify()` falla abierto si no hay `TURNSTILE_SECRET_KEY`; comportamiento intencional para instalaciones sin Turnstile.
 - `docs/superpowers/` y `.superpowers/sdd/` son artefactos de una sesión de planificación/ejecución anterior (rediseño de la interfaz); son historial, no documentación viva a mantener actualizada salvo que se esté continuando esa misma tarea.
 - El proyecto no dispone actualmente de una suite automatizada completa; lint (`php -l`, `node --check`) y pruebas manuales focalizadas son obligatorios.
+- `views/docs/file-list.php` usaba `IntlDateFormatter` para formatear fechas; como la extensión `intl` no está instalada en el servidor real, esto lanzaba un `Error` no capturado en cuanto la biblioteca de Documentos tenía algún archivo o carpeta, cortando la página a mitad de render (nunca se llegaba a `main-footer.php`, así que ni el tema claro/oscuro ni ninguna otra acción JS funcionaban en esa vista). Sustituido por `date()` nativo; no reintroducir `IntlDateFormatter` ni otra dependencia de `intl` sin confirmar antes que la extensión está disponible.
 - Despliegue real (Apache, `/etc/apache2/sites-enabled/000-default-le-ssl.conf`): la ruta **`/explorador/`** es un `Alias` directo a este directorio (`/mnt/disco/explorador/`) — es el despliegue que corresponde a este código, y sus peticiones quedan en `/var/log/apache2/access.log` y `error.log` (log general del vhost, no uno propio). Las rutas **`/peliculas/`** y **`/transmision/`** son `ProxyPass` hacia `http://127.0.0.1:8060/`, un proceso/instancia **distinto**, con su propio log (`/var/log/apache2/file-explorer-access.log`); no asumir que ese tráfico corresponde a cambios hechos aquí. Al depurar en producción, comprobar siempre `/explorador/` y su log general antes de sacar conclusiones.

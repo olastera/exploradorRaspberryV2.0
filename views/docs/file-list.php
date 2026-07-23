@@ -23,7 +23,7 @@
                     </td>
                     <td class="text-muted small">-</td>
                     <td class="text-muted small">Carpeta</td>
-                    <td class="text-muted small"><?php echo (new IntlDateFormatter('es_ES', IntlDateFormatter::MEDIUM, IntlDateFormatter::SHORT))->format($mtime); ?></td>
+                    <td class="text-muted small"><?php echo date('d/m/Y H:i', $mtime); ?></td>
                     <td class="text-end text-nowrap">
                         <a href="<?php echo $link; ?>" class="btn btn-sm btn-outline-light px-2" style="border-radius:6px;" title="Abrir"><i aria-hidden="true" class="bi bi-folder2-open"></i></a>
                         <?php if ($isAdmin): ?>
@@ -67,7 +67,7 @@
                     </td>
                     <td class="text-muted small"><?php echo $sizeStr; ?></td>
                     <td class="text-muted small"><?php echo $typeLabel; ?></td>
-                    <td class="text-muted small"><?php echo (new IntlDateFormatter('es_ES', IntlDateFormatter::MEDIUM, IntlDateFormatter::SHORT))->format($mtime); ?></td>
+                    <td class="text-muted small"><?php echo date('d/m/Y H:i', $mtime); ?></td>
                     <td class="text-end text-nowrap">
                         <a href="<?php echo $fileUrl; ?>" download class="btn btn-sm btn-outline-light px-2" style="border-radius:6px;" title="Descargar"><i aria-hidden="true" class="bi bi-download"></i></a>
                         <button onclick='copyToClipboard(<?php echo htmlspecialchars(json_encode($fileUrl), ENT_QUOTES); ?>)' class="btn btn-sm btn-outline-light px-2" title="Copia URL"><i class="bi bi-clipboard"></i></button>

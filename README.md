@@ -24,7 +24,7 @@ Explorador web privat per gestionar una biblioteca de pel·lícules, música i d
 - Raspberry Pi o servidor Linux.
 - Apache 2 amb **mod_rewrite**.
 - PHP 8.0 o superior.
-- Extensions PHP: JSON, Zip, OpenSSL i Intl.
+- Extensions PHP: JSON, Zip i OpenSSL.
 - FFmpeg i FFprobe per a les conversions.
 - Permisos de lectura i escriptura sobre les biblioteques administrades.
 
