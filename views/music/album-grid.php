@@ -93,7 +93,9 @@ $hasAudio = !empty(array_filter($files, fn($f) => in_array(strtolower(pathinfo($
                             <button onclick='showRenameModal(<?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>)' class="btn btn-sm btn-outline-light px-2" style="border-radius:6px;" title="Canvia el nom">
                                 <i aria-hidden="true" class="bi bi-pencil"></i>
                             </button>
+                            <?php if (in_array($ext, $videoExtensions, true)): ?>
                             <button onclick='moveLibraryItem(<?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>, "movies")' class="btn btn-sm btn-outline-primary px-2" title="Mou a Pel·lícules"><i class="bi bi-film"></i></button>
+                            <?php endif; ?>
                             <button onclick='moveLibraryItem(<?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>, "docs")' class="btn btn-sm btn-outline-info px-2" title="Mou a Documents"><i class="bi bi-file-earmark-text"></i></button>
                             <button onclick='deleteLibraryItem(<?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>)' class="btn btn-sm btn-outline-danger px-2" style="border-radius:6px;" title="Elimina">
                                 <i aria-hidden="true" class="bi bi-trash"></i>

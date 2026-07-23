@@ -80,8 +80,12 @@
                         <?php endif; ?>
                         <?php if ($isAdmin): ?>
                             <button onclick='showRenameModal(<?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>)' class="btn btn-sm btn-outline-light px-2" style="border-radius:6px;" title="Canvia el nom"><i aria-hidden="true" class="bi bi-pencil"></i></button>
+                            <?php if (in_array($ext, $videoExtensions, true)): ?>
                             <button onclick='moveLibraryItem(<?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>, "movies")' class="btn btn-sm btn-outline-primary px-2" title="Mou a Pel·lícules"><i class="bi bi-film"></i></button>
+                            <?php endif; ?>
+                            <?php if (in_array($ext, $audioExtensions, true)): ?>
                             <button onclick='moveLibraryItem(<?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>, "music")' class="btn btn-sm btn-outline-success px-2" title="Mou a Música"><i class="bi bi-music-note"></i></button>
+                            <?php endif; ?>
                             <button onclick='deleteLibraryItem(<?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>)' class="btn btn-sm btn-outline-danger px-2" style="border-radius:6px;" title="Elimina"><i aria-hidden="true" class="bi bi-trash"></i></button>
                         <?php endif; ?>
                     </td>
