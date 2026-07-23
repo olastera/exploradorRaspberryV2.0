@@ -9,7 +9,7 @@
     <title><?php echo $pageTitle; ?></title>
     <link href="assets/vendor/bootstrap/bootstrap.min.css?v=5.3.0" rel="stylesheet">
     <link rel="stylesheet" href="assets/vendor/bootstrap-icons/bootstrap-icons.min.css?v=1.10.0">
-    <link rel="stylesheet" href="assets/css/app.css?v=6">
+    <link rel="stylesheet" href="assets/css/app.css?v=7">
 </head>
 <body>
     <button class="mobile-menu-btn" type="button" onclick="toggleSidebar()" aria-label="Abrir menú" aria-controls="mainSidebar">

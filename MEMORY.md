@@ -13,6 +13,7 @@ Mantener un explorador web privado para una biblioteca multimedia alojada en dis
 - Sección de administración para configurar rutas absolutas de las tres bibliotecas y gestionar usuarios.
 - Autenticación por sesión, roles de administrador/usuario, Turnstile y CSRF.
 - Búsqueda de metadatos cinematográficos con IMDb y OMDb.
+- Las tarjetas de películas y carpetas incluyen un botón Info que consulta los metadatos y abre la ficha en el modal IMDb; está disponible tanto en la cuadrícula como en la vista de lista.
 - Las fichas completas de películas se conservan en caché durante 30 días; los fallos y fichas incompletas se reintentan antes.
 - Conversión de vídeo en cola mediante FFmpeg.
 - Agrupación de varias carpetas de películas en una carpeta nueva, con resolución de colisiones y eliminación exclusiva de directorios vacíos.
@@ -37,6 +38,10 @@ Las rutas de películas, música y documentos se pueden modificar desde el panel
 ### Diseño
 
 Petify está implementado en Flutter y no puede trasladarse directamente a este proyecto. Se mantienen sus ideas visuales —sidebar, tarjetas, tema oscuro, espacios y panel administrativo— mediante Bootstrap y CSS propio.
+
+### Información de películas
+
+El botón Info de **views/admin-movies.php** llama a `showMovieInfo()` en **assets/js/app.js**. La función consulta **imdb_search.php** y reutiliza **views/partials/poster-modal.php** para mostrar título, año, valoración, género, duración, argumento, póster y enlace a IMDb. Si no hay resultados o falla la consulta, se informa al usuario.
 
 ### Seguridad
 

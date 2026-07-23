@@ -10,6 +10,7 @@ Explorador de medios desarrollado en PHP sin framework. Permite navegar, reprodu
 - **dashboard.php**: panel de administración.
 - **conversiones.php** / **convert.php**: interfaz y API de conversiones con FFmpeg.
 - **serve.php**: entrega de archivos y soporte para HTTP Range.
+- **imdb_search.php**: API de consulta de metadatos cinematográficos usada por las portadas y el botón Info.
 - **config/**: carga de entorno, constantes y autoload.
 - **src/Auth/**: autenticación, usuarios, CSRF y Turnstile.
 - **src/Media/**: exploración, portapapeles y conversiones.
@@ -65,4 +66,5 @@ Las variables BOOTSTRAP_ADMIN_* solo se usan para inicializar una instalación s
 - **.htaccess** bloquea archivos directos salvo PHP y recursos estáticos permitidos en assets.
 - **storage/.users.json** puede contener cuentas existentes. No reemplazarlo ni regenerarlo automáticamente.
 - **storage/settings.json** contiene las rutas elegidas en Administración y prevalece sobre las rutas de medios de .env.
+- En Películas, el botón Info de carpetas y archivos consulta **imdb_search.php** y abre **views/partials/poster-modal.php** mediante `showMovieInfo()`; conservar este flujo al modificar las tarjetas o la vista de lista.
 - El proyecto no dispone actualmente de una suite automatizada completa; lint y pruebas manuales focalizadas son obligatorios.

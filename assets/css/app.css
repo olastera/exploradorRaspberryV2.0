@@ -159,6 +159,7 @@ a:hover { color: var(--accent-hover); }
   box-shadow: 0 1px 5px rgba(0,0,0,0.45);
 }
 .item-actions { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+.list-item-actions { display: none; }
 .movie-card-poster {
   position: relative;
   aspect-ratio: 2/3;
@@ -307,8 +308,8 @@ a:hover { color: var(--accent-hover); }
 .explorer-list-view .movie-card { display: grid; grid-template-columns: 72px minmax(0, 1fr); min-height: 96px; }
 .explorer-list-view .movie-card-poster { width: 72px; height: 108px; aspect-ratio: auto; grid-row: 1 / span 2; }
 .explorer-list-view .movie-card-body { align-self: center; min-width: 0; }
-.explorer-list-view .movie-card-overlay { opacity: 1; flex-direction: column; gap: 0.2rem; }
-.explorer-list-view .movie-card-overlay .btn { width: 26px; height: 26px; font-size: 0.75rem; }
+.explorer-list-view .movie-card-overlay { display: none; }
+.explorer-list-view .list-item-actions { display: flex; }
 .selection-bar {
   position: fixed;
   bottom: 0;

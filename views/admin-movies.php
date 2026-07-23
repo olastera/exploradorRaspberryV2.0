@@ -30,6 +30,7 @@
                 <div class="title" style="color:var(--text)"><?php echo htmlspecialchars($dir); ?></div>
                 <div class="subtitle mb-2">Carpeta</div>
                 <div class="item-actions">
+                    <button class="btn btn-sm btn-outline-info" onclick='showMovieInfo(<?php echo htmlspecialchars(json_encode($cleanName), ENT_QUOTES); ?>)' title="Informació"><i class="bi bi-info-circle"></i></button>
                     <button class="btn btn-sm btn-outline-light" onclick='showRenameModal(<?php echo htmlspecialchars(json_encode($dir), ENT_QUOTES); ?>)' title="Canvia el nom"><i class="bi bi-pencil"></i></button>
                     <button class="btn btn-sm btn-outline-success" onclick='moveLibraryItem(<?php echo htmlspecialchars(json_encode($dir), ENT_QUOTES); ?>, "music")' title="Mou a Música"><i class="bi bi-music-note"></i></button>
                     <button class="btn btn-sm btn-outline-primary" onclick='moveLibraryItem(<?php echo htmlspecialchars(json_encode($dir), ENT_QUOTES); ?>, "docs")' title="Mou a Documents"><i class="bi bi-file-earmark-text"></i></button>
@@ -50,6 +51,9 @@
             <div class="movie-card-poster">
                 <img class="poster-thumb shimmer" data-query="<?php echo htmlspecialchars($cleanName); ?>" alt="<?php echo htmlspecialchars($file); ?>" width="300" height="450" loading="lazy">
                 <div class="movie-card-overlay">
+                    <button class="btn btn-light" onclick='showMovieInfo(<?php echo htmlspecialchars(json_encode($cleanName), ENT_QUOTES); ?>)' title="Informació">
+                        <i aria-hidden="true" class="bi bi-info-circle" style="color:#0284c7"></i>
+                    </button>
                     <?php if ($isVideo): ?>
                     <button class="btn btn-light" onclick='playVideo(<?php echo htmlspecialchars(json_encode($fileUrl), ENT_QUOTES); ?>, <?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>)' title="Reprodueix">
                         <i aria-hidden="true" class="bi bi-play-fill"></i>
@@ -83,6 +87,23 @@
             <div class="movie-card-body">
                 <div class="title"><?php echo htmlspecialchars($file); ?></div>
                 <div class="subtitle"><?php echo $isVideo ? 'Vídeo' : strtoupper($ext); ?></div>
+                <div class="item-actions list-item-actions mt-2">
+                    <button class="btn btn-sm btn-outline-info" onclick='showMovieInfo(<?php echo htmlspecialchars(json_encode($cleanName), ENT_QUOTES); ?>)' title="Informació"><i class="bi bi-info-circle"></i></button>
+                    <?php if ($isVideo): ?>
+                    <button class="btn btn-sm btn-outline-success" onclick='playVideo(<?php echo htmlspecialchars(json_encode($fileUrl), ENT_QUOTES); ?>, <?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>)' title="Reprodueix"><i class="bi bi-play-fill"></i></button>
+                    <?php endif; ?>
+                    <button class="btn btn-sm btn-outline-light" onclick='copyToClipboard(<?php echo htmlspecialchars(json_encode($fileUrl), ENT_QUOTES); ?>)' title="Copia URL"><i class="bi bi-link"></i></button>
+                    <?php if ($isVideo): ?>
+                    <button class="btn btn-sm btn-outline-danger" onclick='searchTrailer(<?php echo htmlspecialchars(json_encode($cleanName), ENT_QUOTES); ?>)' title="Tràiler"><i class="bi bi-youtube"></i></button>
+                    <?php endif; ?>
+                    <button class="btn btn-sm btn-outline-light" onclick='showRenameModal(<?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>)' title="Canvia el nom"><i class="bi bi-pencil"></i></button>
+                    <button class="btn btn-sm btn-outline-success" onclick='moveLibraryItem(<?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>, "music")' title="Mou a Música"><i class="bi bi-music-note"></i></button>
+                    <button class="btn btn-sm btn-outline-primary" onclick='moveLibraryItem(<?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>, "docs")' title="Mou a Documents"><i class="bi bi-file-earmark-text"></i></button>
+                    <?php if ($isVideo && $ext !== 'mp4' && substr(pathinfo($file, PATHINFO_FILENAME), -4) !== '_web'): ?>
+                    <button class="btn btn-sm btn-outline-warning" onclick='convertToMp4(<?php echo htmlspecialchars(json_encode(($relativePath ? $relativePath . '/' : '') . $file), ENT_QUOTES); ?>)' title="Converteix a MP4"><i class="bi bi-arrow-repeat"></i></button>
+                    <?php endif; ?>
+                    <button class="btn btn-sm btn-outline-danger" onclick='deleteLibraryItem(<?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>)' title="Elimina"><i class="bi bi-trash"></i></button>
+                </div>
             </div>
         </div>
         <?php endforeach; ?>

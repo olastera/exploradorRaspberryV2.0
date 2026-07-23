@@ -119,6 +119,24 @@ function showPosterModal(data, query) {
   };
 }
 
+function showMovieInfo(query) {
+  fetch('imdb_search.php?q=' + encodeURIComponent(query))
+    .then(function(response) {
+      if (!response.ok) throw new Error('No s\'ha pogut carregar la informació');
+      return response.json();
+    })
+    .then(function(data) {
+      if (!data.found) {
+        window.alert('No s\'ha trobat informació per a «' + query + '».');
+        return;
+      }
+      showPosterModal(data, query);
+    })
+    .catch(function() {
+      window.alert('No s\'ha pogut carregar la informació de la pel·lícula.');
+    });
+}
+
 // Ajax batch poster loading
 function loadPosterBatch(posterImages, startIndex, batchSize) {
   batchSize = batchSize || 5;
