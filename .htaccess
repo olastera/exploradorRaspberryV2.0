@@ -1,0 +1,15 @@
+RewriteEngine On
+
+# Allow public static assets required by the interface
+RewriteRule ^assets/(css|js|vendor)/.*\.(css|js|woff|woff2|ttf|svg|png|jpe?g|gif|webp)$ - [L,NC]
+
+# Allow PHP scripts
+RewriteCond %{REQUEST_URI} \.php$ [NC]
+RewriteRule ^ - [L]
+
+# Block direct access to all other files
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule .* - [F,L]
+
+Options -Indexes
+ServerSignature Off
