@@ -106,13 +106,18 @@ class ImdbSearch
                 }
 
                 if (!empty($result['plot'])) {
+                    $result['plot_lang'] = 'en';
                     $plotToTranslate = substr($result['plot'], 0, 500);
                     $mmUrl = "https://api.mymemory.translated.net/get?q=" . rawurlencode($plotToTranslate) . "&langpair=en|ca";
                     $mmResponse = @file_get_contents($mmUrl, false, $ctx);
                     if ($mmResponse !== false) {
                         $mmData = json_decode($mmResponse, true);
-                        if (!empty($mmData['responseData']['translatedText'])) {
-                            $result['plot'] = $mmData['responseData']['translatedText'];
+                        $translated = $mmData['responseData']['translatedText'] ?? '';
+                        $quotaExceeded = (isset($mmData['responseStatus']) && (int) $mmData['responseStatus'] !== 200)
+                            || stripos($translated, 'MYMEMORY WARNING') !== false;
+                        if ($translated !== '' && !$quotaExceeded) {
+                            $result['plot'] = $translated;
+                            $result['plot_lang'] = 'ca';
                         }
                     }
                 }

@@ -41,7 +41,8 @@ class FileCache
         return !empty($data['found'])
             && !empty($data['title'])
             && !empty($data['poster'])
-            && !empty($data['plot']);
+            && !empty($data['plot'])
+            && ($data['plot_lang'] ?? 'ca') === 'ca';
     }
 
     private static function ttlFor($data)
