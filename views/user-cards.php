@@ -21,6 +21,7 @@
         <div class="col-6 col-md-4 col-lg-3 col-xl-2 usercard-wrapper" data-index="<?php echo $userCardIndex; ?>">
             <a href="<?php echo $link; ?>" class="movie-card text-decoration-none">
                 <div class="movie-card-poster" style="padding-top:133%;">
+                    <div class="poster-fallback" aria-hidden="true"><i class="bi bi-film"></i></div>
                     <img class="poster-thumb shimmer" data-query="<?php echo htmlspecialchars($cleanName); ?>" alt="<?php echo htmlspecialchars($dir); ?>" width="300" height="450" loading="lazy" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;">
                 </div>
                 <div class="movie-card-body text-center py-3 d-flex flex-column align-items-center">

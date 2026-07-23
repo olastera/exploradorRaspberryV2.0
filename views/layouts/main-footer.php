@@ -9,7 +9,7 @@
     <?php endif; ?>
 
     <script src="assets/vendor/bootstrap/bootstrap.bundle.min.js?v=5.3.0"></script>
-    <script src="assets/js/app.js?v=3"></script>
+    <script src="assets/js/app.js?v=6"></script>
     <script>
     var library = '<?php echo isset($library) ? $library : ''; ?>';
     var csrfToken = '<?php echo isset($csrfToken) ? $csrfToken : ''; ?>';

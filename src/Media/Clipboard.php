@@ -15,9 +15,11 @@ class Clipboard
 
     public static function cut($src, $dest)
     {
-        if (self::copy($src, $dest)) {
-            self::deleteRecursive($src);
+        if (@rename($src, $dest)) {
             return true;
+        }
+        if (self::copy($src, $dest)) {
+            return self::deleteRecursive($src);
         }
         return false;
     }
@@ -25,7 +27,7 @@ class Clipboard
     private static function copyDir($src, $dest)
     {
         if (!is_dir($dest)) {
-            mkdir($dest, 0755, true);
+            if (!mkdir($dest, 0755, true)) return false;
         }
         $items = scandir($src);
         foreach ($items as $item) {
@@ -33,9 +35,9 @@ class Clipboard
             $s = $src . '/' . $item;
             $d = $dest . '/' . $item;
             if (is_dir($s)) {
-                self::copyDir($s, $d);
+                if (!self::copyDir($s, $d)) return false;
             } else {
-                copy($s, $d);
+                if (!copy($s, $d)) return false;
             }
         }
         return true;
@@ -47,11 +49,11 @@ class Clipboard
             $items = scandir($path);
             foreach ($items as $item) {
                 if ($item[0] === '.') continue;
-                self::deleteRecursive($path . '/' . $item);
+                if (!self::deleteRecursive($path . '/' . $item)) return false;
             }
-            rmdir($path);
+            return rmdir($path);
         } else {
-            unlink($path);
+            return unlink($path);
         }
     }
 }

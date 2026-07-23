@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/config/bootstrap.php';
 use App\Auth\Auth;
+use App\Media\FileExplorer;
 use App\Security\PathValidator;
 
 $currentUser = Auth::requireAuth();
@@ -16,7 +17,16 @@ if (empty($file)) {
     die('File parameter required');
 }
 
-$root = MEDIA_ROOT;
+$library = $_GET['lib'] ?? 'movies';
+if (!in_array($library, ['movies', 'music', 'docs'], true)) {
+    http_response_code(400);
+    die('Invalid library');
+}
+if ($currentUser['role'] !== 'admin' && $library !== 'movies') {
+    http_response_code(403);
+    die('Access denied');
+}
+$root = FileExplorer::getLibraryRoot($library);
 $validated = PathValidator::validate($root, $file);
 $filePath = $validated['path'];
 

@@ -31,7 +31,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAdmin) {
         if (isset($_POST['delete'])) {
             $itemToDelete = basename($_POST['delete']);
             $fullPathToDelete = PathValidator::validateIn($root, $requestPath . '/' . $itemToDelete);
-            if ($fullPathToDelete && strpos($fullPathToDelete, PathValidator::validate($root, $requestPath)['path']) === 0) {
+            $currentDirectory = PathValidator::validateIn($root, $requestPath);
+            if ($fullPathToDelete && $currentDirectory && dirname($fullPathToDelete) === $currentDirectory) {
                 if (is_dir($fullPathToDelete)) {
                     $result = deleteRecursive($fullPathToDelete);
                 } else {
@@ -48,8 +49,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAdmin) {
             $newName = basename($_POST['rename_new']);
             if (!empty($newName)) {
                 $oldPath = PathValidator::validateIn($root, $requestPath . '/' . $oldName);
-                $newPath = PathValidator::validateIn($root, $requestPath . '/' . $newName);
-                if ($oldPath && $newPath) {
+                $parentPath = PathValidator::validateIn($root, $requestPath);
+                $newPath = $parentPath ? $parentPath . DIRECTORY_SEPARATOR . $newName : null;
+                if ($oldPath && $newPath && dirname($oldPath) === $parentPath && !file_exists($newPath)) {
                     $result = rename($oldPath, $newPath);
                     $msg = $result ? 'Elemento renombrado correctamente.' : 'Error al renombrar.';
                     $msgType = $result ? 'success' : 'danger';
@@ -77,6 +79,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAdmin) {
         }
 
         // Extract videos
+        if (isset($_POST['merge_video_folders'])) {
+            $selectedFolders = json_decode($_POST['merge_video_folders'], true);
+            $destinationName = basename(trim($_POST['merge_destination'] ?? ''));
+            $currentDirectory = PathValidator::validateIn($root, $requestPath);
+            if ($library !== 'movies' || !is_array($selectedFolders) || count($selectedFolders) < 2) {
+                $msg = 'Selecciona com a mínim dues carpetes de pel·lícules.';
+                $msgType = 'danger';
+            } elseif ($destinationName === '' || in_array($destinationName, ['.', '..'], true) || !$currentDirectory) {
+                $msg = 'El nom de la carpeta de destinació no és vàlid.';
+                $msgType = 'danger';
+            } else {
+                $destinationPath = $currentDirectory . DIRECTORY_SEPARATOR . $destinationName;
+                if (file_exists($destinationPath)) {
+                    $msg = 'Ja existeix un element amb el nom de destinació. Tria un nom nou.';
+                    $msgType = 'danger';
+                } elseif (!mkdir($destinationPath, 0755)) {
+                    $msg = 'No s’ha pogut crear la carpeta de destinació.';
+                    $msgType = 'danger';
+                } else {
+                    $moved = 0;
+                    $errors = 0;
+                    $removed = 0;
+                    $retained = 0;
+                    $sourcePaths = [];
+                    foreach (array_unique($selectedFolders) as $folderName) {
+                        $folderName = basename((string) $folderName);
+                        $sourcePath = PathValidator::validateIn($root, $requestPath . '/' . $folderName);
+                        if (!$sourcePath || !is_dir($sourcePath) || dirname($sourcePath) !== $currentDirectory || $sourcePath === $destinationPath) {
+                            $errors++;
+                            continue;
+                        }
+                        $sourcePaths[] = $sourcePath;
+                        $iterator = new RecursiveIteratorIterator(
+                            new RecursiveDirectoryIterator($sourcePath, RecursiveDirectoryIterator::SKIP_DOTS),
+                            RecursiveIteratorIterator::LEAVES_ONLY
+                        );
+                        foreach ($iterator as $sourceFile) {
+                            if (!$sourceFile->isFile() || !FileExplorer::isVideoFile($sourceFile->getFilename())) continue;
+                            $targetFile = uniqueDestinationPath($destinationPath, $sourceFile->getFilename());
+                            if (Clipboard::cut($sourceFile->getPathname(), $targetFile)) $moved++;
+                            else $errors++;
+                        }
+                    }
+                    foreach ($sourcePaths as $sourcePath) {
+                        removeEmptyDirectories($sourcePath);
+                        if (!file_exists($sourcePath)) $removed++;
+                        else $retained++;
+                    }
+                    $msg = "$moved vídeo(s) moguts a «$destinationName». $removed carpeta(es) origen eliminada(es).";
+                    if ($retained) $msg .= " $retained conservada(es) perquè encara contenen altres fitxers.";
+                    if ($errors) $msg .= " $errors error(s).";
+                    $msgType = $errors ? 'warning' : 'success';
+                }
+            }
+        }
+
         if (isset($_POST['extract_folder'])) {
             $folder = basename($_POST['extract_folder']);
             $folderPath = PathValidator::validateIn($root, $requestPath . '/' . $folder);
@@ -201,16 +259,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAdmin && isset($_FILES['upload_f
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAdmin && Csrf::verify($_POST['csrf_token'] ?? '') && isset($_POST['move_item']) && isset($_POST['move_target'])) {
     $itemName = basename($_POST['move_item']);
     $targetLib = $_POST['move_target'];
+    if (!in_array($targetLib, ['movies', 'music', 'docs'], true) || $targetLib === $library) {
+        $msg = 'La biblioteca de destinació no és vàlida.';
+        $msgType = 'danger';
+    } else {
     $targetDir = FileExplorer::getLibraryRoot($targetLib);
     $srcPath = PathValidator::validateIn($root, $requestPath . '/' . $itemName);
     $destPath = $targetDir . '/' . $itemName;
     if ($srcPath && file_exists($srcPath) && !file_exists($destPath)) {
-        $result = rename($srcPath, $destPath);
+        $result = Clipboard::cut($srcPath, $destPath);
         $msg = $result ? 'Movido a ' . $libraryNames[$targetLib] . ' correctamente.' : 'Error al mover.';
         $msgType = $result ? 'success' : 'danger';
     } elseif (file_exists($destPath)) {
         $msg = 'Ya existe un elemento con ese nombre en ' . $libraryNames[$targetLib] . '.';
         $msgType = 'danger';
+    }
     }
 }
 
@@ -218,6 +281,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAdmin && Csrf::verify($_POST['cs
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAdmin && Csrf::verify($_POST['csrf_token'] ?? '') && isset($_POST['move_selected']) && isset($_POST['move_items']) && isset($_POST['move_target'])) {
     $items = json_decode($_POST['move_items'], true);
     $targetLib = $_POST['move_target'];
+    if (!is_array($items) || !in_array($targetLib, ['movies', 'music', 'docs'], true) || $targetLib === $library) {
+        $msg = 'La selecció o la biblioteca de destinació no és vàlida.';
+        $msgType = 'danger';
+    } else {
     $targetDir = FileExplorer::getLibraryRoot($targetLib);
     $count = 0;
     $errors = 0;
@@ -226,7 +293,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAdmin && Csrf::verify($_POST['cs
         $srcPath = PathValidator::validateIn($root, $requestPath . '/' . $itemName);
         $destPath = $targetDir . '/' . $itemName;
         if ($srcPath && file_exists($srcPath) && !file_exists($destPath)) {
-            if (rename($srcPath, $destPath)) $count++;
+            if (Clipboard::cut($srcPath, $destPath)) $count++;
             else $errors++;
         } else {
             $errors++;
@@ -235,6 +302,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAdmin && Csrf::verify($_POST['cs
     $msg = "$count elemento(s) movidos a " . $libraryNames[$targetLib] . ".";
     if ($errors > 0) $msg .= " $errors error(es).";
     $msgType = $count > 0 ? 'success' : 'danger';
+    }
 }
 ?>
 <?php
@@ -282,7 +350,69 @@ include __DIR__ . '/views/layouts/main-header.php';
     </div>
 </div>
 
+<?php if ($isAdmin): ?>
+<div class="toolbar card-custom p-2 mb-3">
+    <div class="input-group input-group-sm explorer-search">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input type="search" class="form-control" id="explorerSearch" placeholder="Cerca per nom…" autocomplete="off">
+    </div>
+    <div class="d-flex gap-2 ms-auto">
+        <?php if ($library === 'movies'): ?>
+        <div class="btn-group btn-group-sm" role="group" aria-label="Visualització">
+            <button class="btn btn-outline-light active" type="button" id="gridViewBtn" onclick="setExplorerView('grid')" title="Graella"><i class="bi bi-grid"></i></button>
+            <button class="btn btn-outline-light" type="button" id="listViewBtn" onclick="setExplorerView('list')" title="Llista"><i class="bi bi-list-ul"></i></button>
+        </div>
+        <?php endif; ?>
+        <span class="text-muted small align-self-center" id="explorerItemCount"></span>
+    </div>
+</div>
+<?php endif; ?>
+
+<?php if ($isAdmin): ?>
+<div class="selection-bar" id="selectionBar">
+    <span id="selectedCount" class="text-muted small">0 seleccionats</span>
+    <button class="btn btn-sm btn-outline-danger" onclick="deleteSelected()"><i class="bi bi-trash"></i> Elimina</button>
+    <?php if ($library === 'movies'): ?>
+    <button class="btn btn-sm btn-outline-warning" onclick="openMergeVideoFolders()"><i class="bi bi-collection-play"></i> Agrupa pel·lícules</button>
+    <?php endif; ?>
+    <?php foreach (['movies' => 'Pel·lícules', 'music' => 'Música', 'docs' => 'Documents'] as $targetKey => $targetLabel): ?>
+        <?php if ($targetKey !== $library): ?>
+        <button class="btn btn-sm btn-outline-primary" onclick="moveSelected('<?php echo $targetKey; ?>')"><i class="bi bi-folder-symlink"></i> Mou a <?php echo $targetLabel; ?></button>
+        <?php endif; ?>
+    <?php endforeach; ?>
+</div>
+<?php endif; ?>
+
+<?php if ($isAdmin && $library === 'movies'): ?>
+<div class="modal fade" id="mergeVideoFoldersModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-collection-play me-2"></i>Agrupa carpetes de pel·lícules</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tanca"></button>
+            </div>
+            <form method="post" id="mergeVideoFoldersForm">
+                <div class="modal-body">
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken, ENT_QUOTES); ?>">
+                    <input type="hidden" name="merge_video_folders" id="mergeVideoFoldersInput">
+                    <p class="small text-muted">Es mouran recursivament tots els vídeos de les carpetes seleccionades.</p>
+                    <div class="small mb-3" id="mergeVideoFoldersList"></div>
+                    <label class="form-label" for="mergeDestinationInput">Nom de la carpeta nova</label>
+                    <input class="form-control" name="merge_destination" id="mergeDestinationInput" placeholder="Ex.: Col·lecció de pel·lícules" required>
+                    <div class="form-text">Les carpetes origen només s’eliminaran si queden completament buides.</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel·la</button>
+                    <button type="submit" class="btn btn-warning"><i class="bi bi-box-arrow-in-right me-1"></i>Mou i agrupa</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
 <!-- Main content -->
+<div id="explorerContent" data-library="<?php echo htmlspecialchars($library, ENT_QUOTES); ?>">
 <?php if ($library === 'movies' && !$isAdmin): ?>
     <?php include __DIR__ . '/views/user-cards.php'; ?>
 <?php elseif ($library === 'movies'): ?>
@@ -292,6 +422,17 @@ include __DIR__ . '/views/layouts/main-header.php';
 <?php elseif ($library === 'docs'): ?>
     <?php include __DIR__ . '/views/docs/file-list.php'; ?>
 <?php endif; ?>
+</div>
+
+<?php if ($isAdmin): ?>
+<nav class="d-flex justify-content-between align-items-center gap-2 mt-3" id="explorerPagination" aria-label="Paginació">
+    <span class="text-muted small" id="explorerPageInfo"></span>
+    <div class="btn-group btn-group-sm">
+        <button class="btn btn-outline-light" type="button" id="explorerPrev"><i class="bi bi-chevron-left"></i></button>
+        <button class="btn btn-outline-light" type="button" id="explorerNext"><i class="bi bi-chevron-right"></i></button>
+    </div>
+</nav>
+<?php endif; ?>
 
 <?php
 ob_start();
@@ -299,7 +440,12 @@ if ($library === 'movies'):
 ?>
 document.addEventListener('DOMContentLoaded', function() {
     var posterImages = document.querySelectorAll('.poster-thumb[data-query]');
-    if (posterImages.length > 0) loadPosterBatch(posterImages, 0, 5);
+    for (let start = 0; start < posterImages.length; start += 5) {
+        setTimeout(function() {
+            loadPosterBatch(posterImages, start, 5);
+        }, (start / 5) * 250);
+    }
+    initExplorerBrowser();
 });
 <?php
 endif;
@@ -319,6 +465,31 @@ function deleteRecursive($path) {
         return rmdir($path);
     }
     return unlink($path);
+}
+
+function uniqueDestinationPath($directory, $filename) {
+    $candidate = $directory . DIRECTORY_SEPARATOR . basename($filename);
+    if (!file_exists($candidate)) return $candidate;
+    $name = pathinfo($filename, PATHINFO_FILENAME);
+    $extension = pathinfo($filename, PATHINFO_EXTENSION);
+    $suffix = $extension === '' ? '' : '.' . $extension;
+    $counter = 1;
+    do {
+        $candidate = $directory . DIRECTORY_SEPARATOR . $name . '_' . $counter . $suffix;
+        $counter++;
+    } while (file_exists($candidate));
+    return $candidate;
+}
+
+function removeEmptyDirectories($directory) {
+    if (!is_dir($directory) || is_link($directory)) return false;
+    foreach (scandir($directory) as $item) {
+        if ($item === '.' || $item === '..') continue;
+        $path = $directory . DIRECTORY_SEPARATOR . $item;
+        if (is_dir($path) && !is_link($path)) removeEmptyDirectories($path);
+    }
+    $remaining = array_values(array_diff(scandir($directory), ['.', '..']));
+    return empty($remaining) ? rmdir($directory) : false;
 }
 
 function handleUpload($root, $requestPath, $files) {

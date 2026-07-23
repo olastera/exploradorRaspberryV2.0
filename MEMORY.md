@@ -10,11 +10,15 @@ Mantener un explorador web privado para una biblioteca multimedia alojada en dis
 - Diseño oscuro responsive inspirado visualmente en Petify.
 - Bootstrap 5.3.0 y Bootstrap Icons 1.10.0 servidos localmente.
 - Navegación lateral para películas, música, documentos, dashboard y conversiones.
+- Sección de administración para configurar rutas absolutas de las tres bibliotecas y gestionar usuarios.
 - Autenticación por sesión, roles de administrador/usuario, Turnstile y CSRF.
 - Búsqueda de metadatos cinematográficos con IMDb y OMDb.
 - Las fichas completas de películas se conservan en caché durante 30 días; los fallos y fichas incompletas se reintentan antes.
 - Conversión de vídeo en cola mediante FFmpeg.
+- Agrupación de varias carpetas de películas en una carpeta nueva, con resolución de colisiones y eliminación exclusiva de directorios vacíos.
 - Streaming con soporte para solicitudes HTTP Range.
+- Monitor de procesos activos tipo top en la pestaña Sistema, actualizado cada tres segundos.
+- Monitorización separada del disco del sistema y de los discos externos que alojan las bibliotecas.
 
 ## Decisiones adoptadas
 
@@ -25,6 +29,10 @@ Bootstrap se cargaba inicialmente desde un CDN. Cuando el CDN no estaba disponib
 ### Configuración de Apache
 
 El **.htaccess** bloqueaba cualquier archivo que no fuese PHP, lo que producía respuestas 403 para CSS, JavaScript y fuentes. Se añadió una excepción limitada a extensiones estáticas dentro de assets.
+
+### Configuración administrable
+
+Las rutas de películas, música y documentos se pueden modificar desde el panel de Administración. Se validan como directorios absolutos, existentes y legibles, y se guardan en **storage/settings.json** sin modificar .env.
 
 ### Diseño
 

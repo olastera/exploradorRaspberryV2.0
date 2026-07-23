@@ -14,9 +14,9 @@ class FileExplorer
     {
         switch ($library) {
             case 'music':
-                return MEDIA_ROOT . '/' . MEDIA_MUSIC;
+                return MEDIA_MUSIC;
             case 'docs':
-                return MEDIA_ROOT . '/' . MEDIA_DOCS;
+                return MEDIA_DOCS;
             case 'movies':
             default:
                 return MEDIA_ROOT . '/' . MEDIA_MOVIES;
@@ -85,9 +85,9 @@ class FileExplorer
         return $bytes . ' B';
     }
 
-    public static function getFileUrl($relativePath)
+    public static function getFileUrl($relativePath, $library = 'movies')
     {
-        return 'serve.php?file=' . urlencode($relativePath);
+        return 'serve.php?lib=' . urlencode($library) . '&file=' . urlencode($relativePath);
     }
 
     public static function isVideoFile($file)

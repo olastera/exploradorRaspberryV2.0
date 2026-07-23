@@ -14,6 +14,7 @@ Explorador de medios desarrollado en PHP sin framework. Permite navegar, reprodu
 - **src/Auth/**: autenticación, usuarios, CSRF y Turnstile.
 - **src/Media/**: exploración, portapapeles y conversiones.
 - **src/Security/PathValidator.php**: confinamiento de rutas.
+- **src/System/Settings.php**: persistencia y validación de las rutas configurables.
 - **views/**: layouts, vistas y modales.
 - **assets/css/app.css**: tema y layout responsive.
 - **assets/js/app.js**: comportamiento del cliente.
@@ -63,5 +64,5 @@ Las variables BOOTSTRAP_ADMIN_* solo se usan para inicializar una instalación s
 - Petify es una plantilla Flutter; este proyecto no comparte su arquitectura. Solo se replica su lenguaje visual mediante PHP, Bootstrap y CSS.
 - **.htaccess** bloquea archivos directos salvo PHP y recursos estáticos permitidos en assets.
 - **storage/.users.json** puede contener cuentas existentes. No reemplazarlo ni regenerarlo automáticamente.
+- **storage/settings.json** contiene las rutas elegidas en Administración y prevalece sobre las rutas de medios de .env.
 - El proyecto no dispone actualmente de una suite automatizada completa; lint y pruebas manuales focalizadas son obligatorios.
-

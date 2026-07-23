@@ -1,11 +1,69 @@
 <?php
 require_once __DIR__ . '/config/bootstrap.php';
 use App\Auth\Auth;
+use App\Auth\Csrf;
+use App\Auth\UserManager;
+use App\Media\FileExplorer;
 use App\System\Dashboard;
+use App\System\Settings;
 
 $currentUser = Auth::requireAuth();
 if ($currentUser['role'] !== 'admin') { header('Location: index.php'); exit; }
 $isAdmin = true;
+$csrfToken = Csrf::token();
+$adminMessage = '';
+$adminMessageType = 'success';
+
+if (isset($_GET['ajax'])) {
+    header('Content-Type: application/json');
+    header('Cache-Control: no-store');
+    echo json_encode(Dashboard::getStats());
+    exit;
+}
+if (isset($_GET['processes'])) {
+    header('Content-Type: application/json');
+    header('Cache-Control: no-store');
+    echo json_encode(Dashboard::getProcesses(15));
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!Csrf::verify($_POST['csrf_token'] ?? '')) {
+        $adminMessage = 'El testimoni de seguretat no és vàlid.';
+        $adminMessageType = 'danger';
+    } elseif (isset($_POST['save_paths'])) {
+        $saved = Settings::savePaths(
+            $_POST['movies_path'] ?? '',
+            $_POST['music_path'] ?? '',
+            $_POST['docs_path'] ?? ''
+        );
+        $adminMessage = $saved
+            ? 'Les rutes s’han desat. S’aplicaran a partir de la pròxima petició.'
+            : 'No s’han pogut desar: totes les rutes han de ser directoris absoluts, existents i llegibles.';
+        $adminMessageType = $saved ? 'success' : 'danger';
+    } elseif (isset($_POST['user_create'])) {
+        $saved = UserManager::create(
+            trim($_POST['user_username'] ?? ''),
+            $_POST['user_password'] ?? '',
+            $_POST['user_role'] ?? 'user'
+        );
+        $adminMessage = $saved ? 'Usuari creat correctament.' : 'No s’ha pogut crear l’usuari.';
+        $adminMessageType = $saved ? 'success' : 'danger';
+    } elseif (isset($_POST['user_update'])) {
+        $saved = UserManager::update(
+            $_POST['user_oldname'] ?? '',
+            trim($_POST['user_username'] ?? ''),
+            $_POST['user_password'] ?? '',
+            $_POST['user_role'] ?? 'user'
+        );
+        $adminMessage = $saved ? 'Usuari actualitzat.' : 'No s’ha pogut actualitzar l’usuari.';
+        $adminMessageType = $saved ? 'success' : 'danger';
+    } elseif (isset($_POST['user_delete_name'])) {
+        $saved = UserManager::delete($_POST['user_delete_name']);
+        $adminMessage = $saved ? 'Usuari eliminat.' : 'No es pot eliminar l’últim administrador.';
+        $adminMessageType = $saved ? 'success' : 'danger';
+    }
+}
 
 $stats = Dashboard::getStats();
 $pageTitle = 'Dashboard - Explorador de Medios';
@@ -23,13 +81,17 @@ function countFiles($dir) {
     }
     return $count;
 }
-$moviesCount = countFiles(MEDIA_ROOT);
-$musicCount = countFiles(MEDIA_ROOT . '/musica');
-$docsCount = countFiles(MEDIA_ROOT . '/documentos');
+$moviesPath = FileExplorer::getLibraryRoot('movies');
+$musicPath = FileExplorer::getLibraryRoot('music');
+$docsPath = FileExplorer::getLibraryRoot('docs');
+$moviesCount = countFiles($moviesPath);
+$musicCount = countFiles($musicPath);
+$docsCount = countFiles($docsPath);
 $diskFree = disk_free_space(MEDIA_ROOT);
 $diskTotal = disk_total_space(MEDIA_ROOT);
 $diskUsed = $diskTotal - $diskFree;
 $totalCount = $moviesCount + $musicCount + $docsCount;
+$users = UserManager::load();
 $libraryPercent = [
     'movies' => $totalCount > 0 ? round($moviesCount / $totalCount * 100) : 33,
     'music' => $totalCount > 0 ? round($musicCount / $totalCount * 100) : 33,
@@ -39,12 +101,17 @@ $libraryPercent = [
 include __DIR__ . '/views/layouts/main-header.php';
 ?>
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3 class="mb-0" style="font-weight:600;"><i aria-hidden="true" class="bi bi-speedometer2 me-2 text-primary"></i>Dashboard</h3>
+    <h3 class="mb-0" style="font-weight:600;"><i aria-hidden="true" class="bi bi-speedometer2 me-2 text-primary"></i>Tauler</h3>
 </div>
+
+<?php if ($adminMessage): ?>
+<div class="alert alert-<?php echo $adminMessageType; ?> py-2"><?php echo htmlspecialchars($adminMessage); ?></div>
+<?php endif; ?>
 
 <ul class="nav nav-tabs dashboard-tabs mb-4">
     <li class="nav-item"><a class="nav-link active" href="#biblioteca" data-bs-toggle="tab">Biblioteca</a></li>
     <li class="nav-item"><a class="nav-link" href="#sistema" data-bs-toggle="tab">Sistema</a></li>
+    <li class="nav-item"><a class="nav-link" href="#administracio" data-bs-toggle="tab">Administració</a></li>
 </ul>
 
 <div class="tab-content">
@@ -142,7 +209,6 @@ include __DIR__ . '/views/layouts/main-header.php';
             $cpuClass = $stats['cpu'] > 80 ? 'bg-danger' : ($stats['cpu'] > 50 ? 'bg-warning' : 'bg-primary');
             $tempClass = $stats['cpuTemp'] !== null ? ($stats['cpuTemp'] > 70 ? 'temp-hot' : ($stats['cpuTemp'] > 55 ? 'temp-warn' : 'temp-ok')) : '';
             $ramClass = $stats['memory']['percent'] > 80 ? 'bg-danger' : ($stats['memory']['percent'] > 60 ? 'bg-warning' : 'bg-info');
-            $diskClass = $stats['disk']['percent'] > 85 ? 'bg-danger' : ($stats['disk']['percent'] > 70 ? 'bg-warning' : 'bg-success');
             ?>
             <div class="col-md-6">
                 <div class="card-custom p-3">
@@ -170,18 +236,22 @@ include __DIR__ . '/views/layouts/main-header.php';
                     <div class="mt-1 small text-muted"><?php echo $stats['memory']['used']; ?> / <?php echo $stats['memory']['total']; ?></div>
                 </div>
             </div>
-            <div class="col-md-6">
-                <div class="card-custom p-3">
-                    <div class="d-flex justify-content-between mb-1">
-                        <span class="text-muted small"><i aria-hidden="true" class="bi bi-hdd me-1"></i>Disco</span>
-                        <span class="fw-bold"><?php echo $stats['disk']['percent']; ?>%</span>
+            <?php foreach ($stats['disks'] as $index => $disk):
+                $currentDiskClass = $disk['percent'] > 85 ? 'bg-danger' : ($disk['percent'] > 70 ? 'bg-warning' : 'bg-success');
+            ?>
+                <div class="col-md-6">
+                    <div class="card-custom p-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted small"><i aria-hidden="true" class="bi bi-hdd me-1"></i>Disc <?php echo $index + 1; ?> · <?php echo htmlspecialchars(implode(' / ', $disk['libraries'])); ?></span>
+                            <span class="fw-bold"><?php echo $disk['percent']; ?>%</span>
+                        </div>
+                        <div class="progress" style="height:8px;background:var(--bg);border-radius:4px;">
+                            <div class="progress-bar <?php echo $currentDiskClass; ?>" style="width:<?php echo $disk['percent']; ?>%;border-radius:4px;"></div>
+                        </div>
+                        <div class="mt-1 small text-muted"><?php echo $disk['used']; ?> / <?php echo $disk['total']; ?> · <?php echo htmlspecialchars($disk['mount']); ?></div>
                     </div>
-                    <div class="progress" style="height:8px;background:var(--bg);border-radius:4px;">
-                        <div class="progress-bar <?php echo $diskClass; ?>" style="width:<?php echo $stats['disk']['percent']; ?>%;border-radius:4px;"></div>
-                    </div>
-                    <div class="mt-1 small text-muted"><?php echo $stats['disk']['used']; ?> / <?php echo $stats['disk']['total']; ?></div>
                 </div>
-            </div>
+            <?php endforeach; ?>
             <div class="col-md-6">
                 <div class="card-custom p-3">
                     <div class="d-flex justify-content-between mb-1">
@@ -196,25 +266,147 @@ include __DIR__ . '/views/layouts/main-header.php';
                 </div>
             </div>
         </div>
+        <div class="card-custom mt-3 overflow-hidden">
+            <div class="d-flex justify-content-between align-items-center p-3 border-bottom" style="border-color:var(--border)!important">
+                <h5 class="mb-0"><i class="bi bi-terminal me-2 text-success"></i>Processos actius</h5>
+                <span class="small text-muted"><span class="process-live-dot"></span> Actualització cada 3 segons</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 process-table">
+                    <thead>
+                        <tr>
+                            <th>PID</th>
+                            <th>Procés</th>
+                            <th class="text-end">CPU</th>
+                            <th class="text-end">Memòria</th>
+                            <th class="text-end">Temps actiu</th>
+                        </tr>
+                    </thead>
+                    <tbody id="processTableBody">
+                        <tr><td colspan="5" class="text-center text-muted py-4">Obre la pestanya Sistema per carregar els processos.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade" id="administracio">
+        <div class="row g-4">
+            <div class="col-12">
+                <div class="card-custom p-4">
+                    <h5 class="mb-3"><i class="bi bi-folder2-open me-2 text-primary"></i>Rutes de les biblioteques</h5>
+                    <form method="post" class="row g-3">
+                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken, ENT_QUOTES); ?>">
+                        <input type="hidden" name="save_paths" value="1">
+                        <div class="col-12">
+                            <label class="form-label" for="moviesPath">Pel·lícules</label>
+                            <input class="form-control" id="moviesPath" name="movies_path" value="<?php echo htmlspecialchars($moviesPath, ENT_QUOTES); ?>" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="musicPath">Música</label>
+                            <input class="form-control" id="musicPath" name="music_path" value="<?php echo htmlspecialchars($musicPath, ENT_QUOTES); ?>" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="docsPath">Documents</label>
+                            <input class="form-control" id="docsPath" name="docs_path" value="<?php echo htmlspecialchars($docsPath, ENT_QUOTES); ?>" required>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-text text-muted mb-3">Introdueix rutes absolutes que existeixin i siguin llegibles pel servidor web.</div>
+                            <button class="btn btn-primary" type="submit"><i class="bi bi-save me-1"></i>Desa les rutes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="card-custom p-4">
+                    <h5 class="mb-3"><i class="bi bi-people me-2 text-primary"></i>Usuaris</h5>
+                    <form method="post" class="row g-2 align-items-end mb-4 pb-4 border-bottom" style="border-color:var(--border)!important">
+                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken, ENT_QUOTES); ?>">
+                        <div class="col-md-4">
+                            <label class="form-label">Nom d’usuari</label>
+                            <input class="form-control" name="user_username" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Contrasenya</label>
+                            <input class="form-control" type="password" name="user_password" required autocomplete="new-password">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Rol</label>
+                            <select class="form-select" name="user_role">
+                                <option value="user">Usuari</option>
+                                <option value="admin">Administrador</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-primary w-100" name="user_create" value="1"><i class="bi bi-person-plus me-1"></i>Crea</button>
+                        </div>
+                    </form>
+
+                    <div class="d-flex flex-column gap-3">
+                    <?php foreach ($users as $user): ?>
+                        <form method="post" class="row g-2 align-items-end p-3 rounded" style="background:var(--bg);border:1px solid var(--border)">
+                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken, ENT_QUOTES); ?>">
+                            <input type="hidden" name="user_oldname" value="<?php echo htmlspecialchars($user['user'], ENT_QUOTES); ?>">
+                            <div class="col-md-3">
+                                <label class="form-label small">Nom d’usuari</label>
+                                <input class="form-control form-control-sm" name="user_username" value="<?php echo htmlspecialchars($user['user'], ENT_QUOTES); ?>" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small">Contrasenya nova</label>
+                                <input class="form-control form-control-sm" type="password" name="user_password" placeholder="Sense canvis" autocomplete="new-password">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small">Rol</label>
+                                <select class="form-select form-select-sm" name="user_role">
+                                    <option value="user" <?php echo $user['role'] === 'user' ? 'selected' : ''; ?>>Usuari</option>
+                                    <option value="admin" <?php echo $user['role'] === 'admin' ? 'selected' : ''; ?>>Administrador</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 d-flex gap-2">
+                                <button class="btn btn-sm btn-outline-primary flex-grow-1" name="user_update" value="1">Actualitza</button>
+                                <button class="btn btn-sm btn-outline-danger" name="user_delete_name" value="<?php echo htmlspecialchars($user['user'], ENT_QUOTES); ?>" onclick="return confirm('Vols eliminar aquest usuari?')"><i class="bi bi-trash"></i></button>
+                            </div>
+                        </form>
+                    <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
 <?php
 $pageScript = '
+document.addEventListener("DOMContentLoaded", function() {
+    if (window.location.hash === "#administracio") {
+        var trigger = document.querySelector("[href=\"#administracio\"]");
+        if (trigger) bootstrap.Tab.getOrCreateInstance(trigger).show();
+    }
+});
+
 function refreshDashboard() {
     fetch("dashboard.php?ajax=1")
         .then(function(r) { return r.json(); })
         .then(function(stats) {
             var cpuClass = stats.cpu > 80 ? "bg-danger" : (stats.cpu > 50 ? "bg-warning" : "bg-primary");
             var ramClass = stats.memory.percent > 80 ? "bg-danger" : (stats.memory.percent > 60 ? "bg-warning" : "bg-info");
-            var diskClass = stats.disk.percent > 85 ? "bg-danger" : (stats.disk.percent > 70 ? "bg-warning" : "bg-success");
             var html = "";
             var cards = [
                 { label: "CPU", value: stats.cpu + "%", bar: stats.cpu, cls: cpuClass },
-                { label: "RAM", value: stats.memory.percent + "%", bar: stats.memory.percent, cls: ramClass, sub: stats.memory.used + " / " + stats.memory.total },
-                { label: "Disco", value: stats.disk.percent + "%", bar: stats.disk.percent, cls: diskClass, sub: stats.disk.used + " / " + stats.disk.total },
-                { label: "Sistema", value: stats.hostname, noBar: true, sub: stats.uptime + " | PHP " + stats.php }
+                { label: "RAM", value: stats.memory.percent + "%", bar: stats.memory.percent, cls: ramClass, sub: stats.memory.used + " / " + stats.memory.total }
             ];
+            (stats.disks || []).forEach(function(disk, index) {
+                var diskClass = disk.percent > 85 ? "bg-danger" : (disk.percent > 70 ? "bg-warning" : "bg-success");
+                cards.push({
+                    label: "Disc " + (index + 1) + " · " + disk.libraries.join(" / "),
+                    value: disk.percent + "%",
+                    bar: disk.percent,
+                    cls: diskClass,
+                    sub: disk.used + " / " + disk.total + " · " + disk.mount
+                });
+            });
+            cards.push({ label: "Sistema", value: stats.hostname, noBar: true, sub: stats.uptime + " | PHP " + stats.php });
             cards.forEach(function(c) {
                 html += "<div class=\"col-md-6\"><div class=\"card-custom p-3\">";
                 html += "<div class=\"d-flex justify-content-between mb-1\"><span class=\"text-muted small\">" + c.label + "</span><span class=\"fw-bold\">" + c.value + "</span></div>";
@@ -226,6 +418,45 @@ function refreshDashboard() {
         });
 }
 setInterval(refreshDashboard, 5000);
+
+function refreshProcesses() {
+    var systemTab = document.getElementById("sistema");
+    if (!systemTab || !systemTab.classList.contains("active")) return;
+    fetch("dashboard.php?processes=1", { cache: "no-store" })
+        .then(function(response) { return response.json(); })
+        .then(function(processes) {
+            var body = document.getElementById("processTableBody");
+            body.textContent = "";
+            if (!processes.length) {
+                var emptyRow = body.insertRow();
+                var emptyCell = emptyRow.insertCell();
+                emptyCell.colSpan = 5;
+                emptyCell.className = "text-center text-muted py-4";
+                emptyCell.textContent = "No s’han pogut obtenir els processos.";
+                return;
+            }
+            processes.forEach(function(process) {
+                var row = body.insertRow();
+                var values = [
+                    process.pid,
+                    process.command,
+                    process.cpu.toFixed(1) + "%",
+                    process.memory.toFixed(1) + "%",
+                    process.elapsed
+                ];
+                values.forEach(function(value, index) {
+                    var cell = row.insertCell();
+                    cell.textContent = value;
+                    if (index >= 2) cell.className = "text-end";
+                    if (index === 1) cell.className = "process-command";
+                });
+            });
+        });
+}
+document.querySelectorAll("[data-bs-toggle=\"tab\"]").forEach(function(tab) {
+    tab.addEventListener("shown.bs.tab", refreshProcesses);
+});
+setInterval(refreshProcesses, 3000);
 
 fetch("dashboard.php?recent=1")
     .then(function(r) { return r.json(); })
@@ -249,13 +480,6 @@ fetch("dashboard.php?recent=1")
 include __DIR__ . "/views/layouts/main-footer.php";
 ?>
 <?php
-// AJAX endpoint for auto-refresh
-if (isset($_GET['ajax'])) {
-    header('Content-Type: application/json');
-    echo json_encode(Dashboard::getStats());
-    exit;
-}
-
 // AJAX endpoint for recent files
 if (isset($_GET['recent'])) {
     header('Content-Type: application/json');
@@ -292,9 +516,9 @@ if (isset($_GET['recent'])) {
         return array_slice($recent, 0, $limit);
     }
     $all = array_merge(
-        getRecentFiles(MEDIA_ROOT, 'Películas', 5),
-        getRecentFiles(MEDIA_ROOT . '/musica', 'Música', 3),
-        getRecentFiles(MEDIA_ROOT . '/documentos', 'Documentos', 3)
+        getRecentFiles($moviesPath, 'Pel·lícules', 5),
+        getRecentFiles($musicPath, 'Música', 3),
+        getRecentFiles($docsPath, 'Documents', 3)
     );
     usort($all, fn($a, $b) => $b['mtime'] - $a['mtime']);
     echo json_encode(array_slice($all, 0, 10));

@@ -2,6 +2,7 @@
     <table class="table docs-table table-hover align-middle" id="docsTable">
         <thead>
             <tr>
+                <?php if ($isAdmin): ?><th style="width:3%"></th><?php endif; ?>
                 <th style="width:40%" class="sortable" data-col="name" onclick="sortDocsTable('name')">Nombre <i aria-hidden="true" class="bi bi-arrow-down-up sort-icon ms-1 text-muted"></i></th>
                 <th style="width:15%" class="sortable" data-col="size" onclick="sortDocsTable('size')">Tamaño <i aria-hidden="true" class="bi bi-arrow-down-up sort-icon ms-1 text-muted"></i></th>
                 <th style="width:15%" class="sortable" data-col="type" onclick="sortDocsTable('type')">Tipo <i aria-hidden="true" class="bi bi-arrow-down-up sort-icon ms-1 text-muted"></i></th>
@@ -14,7 +15,8 @@
                 $link = '?lib=docs&path=' . urlencode(($relativePath ? $relativePath . '/' : '') . $dir);
                 $mtime = filemtime($targetPath . DIRECTORY_SEPARATOR . $dir);
             ?>
-                <tr data-type="folder" data-name="<?php echo htmlspecialchars(strtolower($dir)); ?>" data-size="0" data-date="<?php echo $mtime; ?>" style="cursor:pointer;" onclick="window.location.href='<?php echo $link; ?>'" role="link" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' ')window.location.href='<?php echo $link; ?>'">
+                <tr class="explorer-item" data-type="folder" data-name="<?php echo htmlspecialchars($dir, ENT_QUOTES); ?>" data-size="0" data-date="<?php echo $mtime; ?>" style="cursor:pointer;" onclick="window.location.href='<?php echo $link; ?>'" role="link" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' ')window.location.href='<?php echo $link; ?>'">
+                    <?php if ($isAdmin): ?><td onclick="event.stopPropagation()"><input class="form-check-input item-checkbox" type="checkbox" value="<?php echo htmlspecialchars($dir, ENT_QUOTES); ?>"></td><?php endif; ?>
                     <td>
                         <i aria-hidden="true" class="bi bi-folder-fill me-2" style="color:#fbbf24;"></i>
                         <?php echo htmlspecialchars($dir); ?>
@@ -25,8 +27,10 @@
                     <td class="text-end text-nowrap">
                         <a href="<?php echo $link; ?>" class="btn btn-sm btn-outline-light px-2" style="border-radius:6px;" title="Abrir"><i aria-hidden="true" class="bi bi-folder2-open"></i></a>
                         <?php if ($isAdmin): ?>
-                            <button onclick="event.stopPropagation();showRenameModal('<?php echo htmlspecialchars($dir, ENT_QUOTES); ?>')" class="btn btn-sm btn-outline-light px-2" style="border-radius:6px;" title="Renombrar"><i aria-hidden="true" class="bi bi-pencil"></i></button>
-                            <button onclick="event.stopPropagation();deleteDoc('<?php echo htmlspecialchars($dir, ENT_QUOTES); ?>')" class="btn btn-sm btn-outline-danger px-2" style="border-radius:6px;" title="Eliminar"><i aria-hidden="true" class="bi bi-trash"></i></button>
+                            <button onclick='event.stopPropagation();showRenameModal(<?php echo htmlspecialchars(json_encode($dir), ENT_QUOTES); ?>)' class="btn btn-sm btn-outline-light px-2" style="border-radius:6px;" title="Canvia el nom"><i aria-hidden="true" class="bi bi-pencil"></i></button>
+                            <button onclick='event.stopPropagation();moveLibraryItem(<?php echo htmlspecialchars(json_encode($dir), ENT_QUOTES); ?>, "movies")' class="btn btn-sm btn-outline-primary px-2" title="Mou a Pel·lícules"><i class="bi bi-film"></i></button>
+                            <button onclick='event.stopPropagation();moveLibraryItem(<?php echo htmlspecialchars(json_encode($dir), ENT_QUOTES); ?>, "music")' class="btn btn-sm btn-outline-success px-2" title="Mou a Música"><i class="bi bi-music-note"></i></button>
+                            <button onclick='event.stopPropagation();deleteLibraryItem(<?php echo htmlspecialchars(json_encode($dir), ENT_QUOTES); ?>)' class="btn btn-sm btn-outline-danger px-2" style="border-radius:6px;" title="Elimina"><i aria-hidden="true" class="bi bi-trash"></i></button>
                         <?php endif; ?>
                     </td>
                 </tr>
@@ -35,7 +39,7 @@
             <?php foreach ($files as $file):
                 $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
                 $relPath = ($relativePath ? $relativePath . '/' : '') . $file;
-                $fileUrl = 'serve.php?file=' . urlencode($relPath);
+                $fileUrl = 'serve.php?lib=docs&file=' . urlencode($relPath);
                 $fsize = filesize($targetPath . DIRECTORY_SEPARATOR . $file);
                 $sizeStr = \App\Media\FileExplorer::formatSize($fsize);
                 $mtime = filemtime($targetPath . DIRECTORY_SEPARATOR . $file);
@@ -55,7 +59,8 @@
                 $isImage = in_array($ext, $imageExts);
                 $isText = in_array($ext, $textExts);
             ?>
-                <tr data-type="file" data-name="<?php echo htmlspecialchars(strtolower($file)); ?>" data-size="<?php echo $fsize; ?>" data-date="<?php echo $mtime; ?>">
+                <tr class="explorer-item" data-type="file" data-name="<?php echo htmlspecialchars($file, ENT_QUOTES); ?>" data-size="<?php echo $fsize; ?>" data-date="<?php echo $mtime; ?>">
+                    <?php if ($isAdmin): ?><td><input class="form-check-input item-checkbox" type="checkbox" value="<?php echo htmlspecialchars($file, ENT_QUOTES); ?>"></td><?php endif; ?>
                     <td>
                         <i aria-hidden="true" class="bi <?php echo $icon; ?> me-2 text-primary"></i>
                         <?php echo htmlspecialchars($file); ?>
@@ -65,6 +70,7 @@
                     <td class="text-muted small"><?php echo (new IntlDateFormatter('es_ES', IntlDateFormatter::MEDIUM, IntlDateFormatter::SHORT))->format($mtime); ?></td>
                     <td class="text-end text-nowrap">
                         <a href="<?php echo $fileUrl; ?>" download class="btn btn-sm btn-outline-light px-2" style="border-radius:6px;" title="Descargar"><i aria-hidden="true" class="bi bi-download"></i></a>
+                        <button onclick='copyToClipboard(<?php echo htmlspecialchars(json_encode($fileUrl), ENT_QUOTES); ?>)' class="btn btn-sm btn-outline-light px-2" title="Copia URL"><i class="bi bi-clipboard"></i></button>
                         <?php if ($canPreview): ?>
                             <?php if ($isImage || $ext === 'pdf'): ?>
                                 <a href="<?php echo $fileUrl; ?>" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary px-2" style="border-radius:6px;" title="Vista previa"><i aria-hidden="true" class="bi bi-eye"></i></a>
@@ -73,8 +79,10 @@
                             <?php endif; ?>
                         <?php endif; ?>
                         <?php if ($isAdmin): ?>
-                            <button onclick="showRenameModal('<?php echo htmlspecialchars($file, ENT_QUOTES); ?>')" class="btn btn-sm btn-outline-light px-2" style="border-radius:6px;" title="Renombrar"><i aria-hidden="true" class="bi bi-pencil"></i></button>
-                            <button onclick="deleteDoc('<?php echo htmlspecialchars($file, ENT_QUOTES); ?>')" class="btn btn-sm btn-outline-danger px-2" style="border-radius:6px;" title="Eliminar"><i aria-hidden="true" class="bi bi-trash"></i></button>
+                            <button onclick='showRenameModal(<?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>)' class="btn btn-sm btn-outline-light px-2" style="border-radius:6px;" title="Canvia el nom"><i aria-hidden="true" class="bi bi-pencil"></i></button>
+                            <button onclick='moveLibraryItem(<?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>, "movies")' class="btn btn-sm btn-outline-primary px-2" title="Mou a Pel·lícules"><i class="bi bi-film"></i></button>
+                            <button onclick='moveLibraryItem(<?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>, "music")' class="btn btn-sm btn-outline-success px-2" title="Mou a Música"><i class="bi bi-music-note"></i></button>
+                            <button onclick='deleteLibraryItem(<?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>)' class="btn btn-sm btn-outline-danger px-2" style="border-radius:6px;" title="Elimina"><i aria-hidden="true" class="bi bi-trash"></i></button>
                         <?php endif; ?>
                     </td>
                 </tr>

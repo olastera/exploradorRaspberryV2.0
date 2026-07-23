@@ -43,6 +43,9 @@ class UserManager
 
     public static function create($username, $password, $role)
     {
+        $username = trim((string) $username);
+        if ($username === '' || (string) $password === '') return false;
+        $role = in_array($role, ['admin', 'user'], true) ? $role : 'user';
         $users = self::load();
         foreach ($users as $u) {
             if ($u['user'] === $username) return false;
@@ -54,7 +57,28 @@ class UserManager
 
     public static function update($oldUsername, $newUsername, $password, $role)
     {
+        $newUsername = trim((string) $newUsername);
+        if ($newUsername === '') return false;
+        $role = in_array($role, ['admin', 'user'], true) ? $role : 'user';
         $users = self::load();
+        foreach ($users as $existing) {
+            if ($existing['user'] === $newUsername && $existing['user'] !== $oldUsername) {
+                return false;
+            }
+        }
+        if ($role !== 'admin') {
+            $adminCount = count(array_filter($users, function ($user) {
+                return $user['role'] === 'admin';
+            }));
+            foreach ($users as $existing) {
+                if ($existing['user'] === $oldUsername
+                    && $existing['role'] === 'admin'
+                    && $adminCount <= 1
+                ) {
+                    return false;
+                }
+            }
+        }
         foreach ($users as &$u) {
             if ($u['user'] === $oldUsername) {
                 $u['user'] = $newUsername;

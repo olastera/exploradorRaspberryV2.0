@@ -5,18 +5,46 @@ class Dashboard
 {
     public static function getStats()
     {
+        $disks = self::getDisks([
+            'Sistema' => '/',
+            'Pel·lícules' => MEDIA_ROOT,
+            'Música' => MEDIA_MUSIC,
+            'Documents' => MEDIA_DOCS,
+        ]);
         return [
             'uptime' => self::getUptime(),
             'cpu' => self::getCpuUsage(),
             'cpuTemp' => self::getCpuTemp(),
             'memory' => self::getMemory(),
-            'disk' => self::getDiskInfo(MEDIA_ROOT),
+            'disk' => $disks[0] ?? self::emptyDisk(),
+            'disks' => $disks,
             'load' => sys_getloadavg(),
             'hostname' => gethostname(),
             'ip' => self::getIp(),
             'os' => php_uname('s') . ' ' . php_uname('r'),
             'php' => phpversion(),
         ];
+    }
+
+    public static function getProcesses($limit = 15)
+    {
+        $output = @shell_exec('ps -eo pid=,comm=,%cpu=,%mem=,etime= --sort=-%cpu 2>/dev/null');
+        if (!$output) return [];
+        $processes = [];
+        foreach (preg_split('/\R/', trim($output)) as $line) {
+            if (!preg_match('/^\s*(\d+)\s+(\S+)\s+([\d.]+)\s+([\d.]+)\s+(\S+)\s*$/', $line, $matches)) {
+                continue;
+            }
+            $processes[] = [
+                'pid' => (int) $matches[1],
+                'command' => $matches[2],
+                'cpu' => (float) $matches[3],
+                'memory' => (float) $matches[4],
+                'elapsed' => $matches[5],
+            ];
+            if (count($processes) >= max(1, min(50, (int) $limit))) break;
+        }
+        return $processes;
     }
 
     private static function getUptime() {
@@ -75,12 +103,12 @@ class Dashboard
     }
 
     private static function getDiskInfo($path) {
-        $df = @shell_exec('df ' . escapeshellarg($path) . ' -B1 2>/dev/null');
-        if (!$df) return ['total' => 0, 'used' => 0, 'avail' => 0, 'percent' => 0];
+        $df = @shell_exec('df -P -B1 ' . escapeshellarg($path) . ' 2>/dev/null');
+        if (!$df) return self::emptyDisk();
         $lines = explode("\n", $df);
-        if (count($lines) < 2) return ['total' => 0, 'used' => 0, 'avail' => 0, 'percent' => 0];
+        if (count($lines) < 2) return self::emptyDisk();
         $parts = preg_split('/\s+/', trim($lines[1]));
-        if (count($parts) < 4) return ['total' => 0, 'used' => 0, 'avail' => 0, 'percent' => 0];
+        if (count($parts) < 6) return self::emptyDisk();
         $total = intval($parts[1]);
         $used = intval($parts[2]);
         $avail = intval($parts[3]);
@@ -90,6 +118,33 @@ class Dashboard
             'used' => self::formatBytes($used),
             'avail' => self::formatBytes($avail),
             'percent' => $percent,
+            'filesystem' => $parts[0],
+            'mount' => $parts[5],
+        ];
+    }
+
+    private static function getDisks($libraryPaths)
+    {
+        $disks = [];
+        foreach ($libraryPaths as $library => $path) {
+            if (!is_dir($path)) continue;
+            $disk = self::getDiskInfo($path);
+            if ($disk['filesystem'] === '') continue;
+            $key = $disk['filesystem'];
+            if (!isset($disks[$key])) {
+                $disk['libraries'] = [];
+                $disks[$key] = $disk;
+            }
+            $disks[$key]['libraries'][] = $library;
+        }
+        return array_values($disks);
+    }
+
+    private static function emptyDisk()
+    {
+        return [
+            'total' => 0, 'used' => 0, 'avail' => 0, 'percent' => 0,
+            'filesystem' => '', 'mount' => '', 'libraries' => [],
         ];
     }
 

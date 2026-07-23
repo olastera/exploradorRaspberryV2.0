@@ -9,7 +9,7 @@
     <title><?php echo $pageTitle; ?></title>
     <link href="assets/vendor/bootstrap/bootstrap.min.css?v=5.3.0" rel="stylesheet">
     <link rel="stylesheet" href="assets/vendor/bootstrap-icons/bootstrap-icons.min.css?v=1.10.0">
-    <link rel="stylesheet" href="assets/css/app.css?v=3">
+    <link rel="stylesheet" href="assets/css/app.css?v=6">
 </head>
 <body>
     <button class="mobile-menu-btn" type="button" onclick="toggleSidebar()" aria-label="Abrir menú" aria-controls="mainSidebar">
@@ -44,6 +44,10 @@
             <a href="dashboard.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF']) === 'dashboard.php' ? 'active' : ''; ?>">
                 <i aria-hidden="true" class="bi bi-speedometer2"></i>
                 <span>Tauler</span>
+            </a>
+            <a href="dashboard.php#administracio" class="sidebar-link">
+                <i aria-hidden="true" class="bi bi-gear"></i>
+                <span>Administració</span>
             </a>
             <a href="conversiones.php" class="sidebar-link <?php echo basename($_SERVER['PHP_SELF']) === 'conversiones.php' ? 'active' : ''; ?>">
                 <i aria-hidden="true" class="bi bi-arrow-repeat"></i>

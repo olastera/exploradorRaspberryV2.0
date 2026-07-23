@@ -9,7 +9,7 @@ $hasAudio = !empty(array_filter($files, fn($f) => in_array(strtolower(pathinfo($
     </div>
 <?php endif; ?>
 
-<?php if (!empty($directories) && !$hasAudio): ?>
+<?php if (!empty($directories)): ?>
 <div class="album-grid" id="albumGrid">
     <?php foreach ($directories as $dir):
         $coverPath = '';
@@ -17,13 +17,14 @@ $hasAudio = !empty(array_filter($files, fn($f) => in_array(strtolower(pathinfo($
             $check = $targetPath . DIRECTORY_SEPARATOR . $dir . DIRECTORY_SEPARATOR . $c;
             if (file_exists($check)) {
                 $relCover = ($relativePath ? $relativePath . '/' : '') . $dir . '/' . $c;
-                $coverPath = 'serve.php?file=' . urlencode($relCover);
+                $coverPath = 'serve.php?lib=music&file=' . urlencode($relCover);
                 break;
             }
         }
         $link = '?lib=music&path=' . urlencode(($relativePath ? $relativePath . '/' : '') . $dir);
     ?>
-        <div class="album-card">
+        <div class="album-card explorer-item position-relative" data-name="<?php echo htmlspecialchars($dir, ENT_QUOTES); ?>" data-type="folder">
+            <?php if ($isAdmin): ?><input class="form-check-input item-checkbox item-selector" type="checkbox" value="<?php echo htmlspecialchars($dir, ENT_QUOTES); ?>"><?php endif; ?>
             <a href="<?php echo $link; ?>" class="album-card text-decoration-none">
                 <?php if ($coverPath): ?>
                     <img src="<?php echo $coverPath; ?>" alt="<?php echo htmlspecialchars($dir); ?>" class="album-cover album-card-cover" style="border-radius:12px 12px 0 0;"><div class="play-overlay"><button class="btn btn-light btn-sm rounded-circle p-2" onclick="event.preventDefault();window.location.href='<?php echo $link; ?>'"><i aria-hidden="true" class="bi bi-play-fill"></i></button></div>
@@ -36,6 +37,14 @@ $hasAudio = !empty(array_filter($files, fn($f) => in_array(strtolower(pathinfo($
                     <p class="card-text small text-truncate w-100 mb-0 text-light"><?php echo htmlspecialchars($dir); ?></p>
                 </div>
             </a>
+            <?php if ($isAdmin): ?>
+            <div class="item-actions p-2 pt-0">
+                <button class="btn btn-sm btn-outline-light" onclick='showRenameModal(<?php echo htmlspecialchars(json_encode($dir), ENT_QUOTES); ?>)' title="Canvia el nom"><i class="bi bi-pencil"></i></button>
+                <button class="btn btn-sm btn-outline-primary" onclick='moveLibraryItem(<?php echo htmlspecialchars(json_encode($dir), ENT_QUOTES); ?>, "movies")' title="Mou a Pel·lícules"><i class="bi bi-film"></i></button>
+                <button class="btn btn-sm btn-outline-info" onclick='moveLibraryItem(<?php echo htmlspecialchars(json_encode($dir), ENT_QUOTES); ?>, "docs")' title="Mou a Documents"><i class="bi bi-file-earmark-text"></i></button>
+                <button class="btn btn-sm btn-outline-danger" onclick='deleteLibraryItem(<?php echo htmlspecialchars(json_encode($dir), ENT_QUOTES); ?>)' title="Elimina"><i class="bi bi-trash"></i></button>
+            </div>
+            <?php endif; ?>
         </div>
     <?php endforeach; ?>
 </div>
@@ -46,6 +55,7 @@ $hasAudio = !empty(array_filter($files, fn($f) => in_array(strtolower(pathinfo($
     <table class="table table-hover align-middle mb-0" id="audioTable">
         <thead>
             <tr>
+                <?php if ($isAdmin): ?><th style="width:4%"></th><?php endif; ?>
                 <th style="width:5%">#</th>
                 <th style="width:55%">Título</th>
                 <th style="width:15%">Tamaño</th>
@@ -59,12 +69,13 @@ $hasAudio = !empty(array_filter($files, fn($f) => in_array(strtolower(pathinfo($
                 if (!in_array($ext, $audioExtensions)) continue;
                 $idx++;
                 $relPath = ($relativePath ? $relativePath . '/' : '') . $file;
-                $fileUrl = 'serve.php?file=' . urlencode($relPath);
+                $fileUrl = 'serve.php?lib=music&file=' . urlencode($relPath);
                 $title = pathinfo($file, PATHINFO_FILENAME);
                 $fsize = filesize($targetPath . DIRECTORY_SEPARATOR . $file);
                 $sizeStr = \App\Media\FileExplorer::formatSize($fsize);
             ?>
-                <tr data-url="<?php echo htmlspecialchars($fileUrl); ?>" data-title="<?php echo htmlspecialchars($file); ?>">
+                <tr class="explorer-item" data-name="<?php echo htmlspecialchars($file, ENT_QUOTES); ?>" data-type="file" data-url="<?php echo htmlspecialchars($fileUrl); ?>" data-title="<?php echo htmlspecialchars($file); ?>">
+                    <?php if ($isAdmin): ?><td><input class="form-check-input item-checkbox" type="checkbox" value="<?php echo htmlspecialchars($file, ENT_QUOTES); ?>"></td><?php endif; ?>
                     <td class="text-muted"><?php echo $idx; ?></td>
                     <td>
                         <i aria-hidden="true" class="bi bi-music-note text-primary me-2"></i>
@@ -79,10 +90,12 @@ $hasAudio = !empty(array_filter($files, fn($f) => in_array(strtolower(pathinfo($
                             <i aria-hidden="true" class="bi bi-clipboard"></i>
                         </button>
                         <?php if ($isAdmin): ?>
-                            <button onclick="showRenameModal('<?php echo htmlspecialchars($file, ENT_QUOTES); ?>')" class="btn btn-sm btn-outline-light px-2" style="border-radius:6px;" title="Renombrar">
+                            <button onclick='showRenameModal(<?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>)' class="btn btn-sm btn-outline-light px-2" style="border-radius:6px;" title="Canvia el nom">
                                 <i aria-hidden="true" class="bi bi-pencil"></i>
                             </button>
-                            <button onclick="deleteAudio('<?php echo htmlspecialchars($file, ENT_QUOTES); ?>')" class="btn btn-sm btn-outline-danger px-2" style="border-radius:6px;" title="Eliminar">
+                            <button onclick='moveLibraryItem(<?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>, "movies")' class="btn btn-sm btn-outline-primary px-2" title="Mou a Pel·lícules"><i class="bi bi-film"></i></button>
+                            <button onclick='moveLibraryItem(<?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>, "docs")' class="btn btn-sm btn-outline-info px-2" title="Mou a Documents"><i class="bi bi-file-earmark-text"></i></button>
+                            <button onclick='deleteLibraryItem(<?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>)' class="btn btn-sm btn-outline-danger px-2" style="border-radius:6px;" title="Elimina">
                                 <i aria-hidden="true" class="bi bi-trash"></i>
                             </button>
                         <?php endif; ?>
@@ -99,7 +112,7 @@ foreach (['folder.jpg', 'cover.jpg', 'Folder.jpg', 'Cover.jpg'] as $c) {
     $check = $targetPath . DIRECTORY_SEPARATOR . $c;
     if (file_exists($check)) {
         $relCover = ($relativePath ? $relativePath . '/' : '') . $c;
-        $albumArt = 'serve.php?file=' . urlencode($relCover);
+        $albumArt = 'serve.php?lib=music&file=' . urlencode($relCover);
         break;
     }
 }
@@ -133,7 +146,7 @@ foreach (['folder.jpg', 'cover.jpg', 'Folder.jpg', 'Cover.jpg'] as $c) {
                         if (!in_array($ext, $audioExtensions)) continue;
                         $idx++;
                         $relPath = ($relativePath ? $relativePath . '/' : '') . $file;
-                        $fileUrl = 'serve.php?file=' . urlencode($relPath);
+                        $fileUrl = 'serve.php?lib=music&file=' . urlencode($relPath);
                     ?>
                         <button class="list-group-item list-group-item-action d-flex align-items-center gap-2" style="background:transparent;border-color:rgba(255,255,255,0.05);color:#F1F5F9;padding:0.5rem 0.75rem;" onclick="playAudio('<?php echo htmlspecialchars($fileUrl, ENT_QUOTES); ?>', '<?php echo htmlspecialchars($file, ENT_QUOTES); ?>')">
                             <span class="text-muted small"><?php echo $idx; ?>.</span>
