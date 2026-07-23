@@ -59,22 +59,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAdmin) {
             }
         }
 
-        // Clipboard
-        if (isset($_POST['clipboard_action']) && isset($_POST['clipboard_items'])) {
+        // Clipboard (copiar/cortar y pegar dentro de la misma biblioteca)
+        if (isset($_POST['clipboard_action']) && isset($_POST['clipboard_items']) && !empty($_POST['clipboard_source'])) {
             $action = $_POST['clipboard_action'];
             $items = json_decode($_POST['clipboard_items'], true);
-            if (!empty($_POST['clipboard_source'])) {
-                $srcBase = PathValidator::validate($root, '')['path'];
+            $currentDirectory = PathValidator::validateIn($root, $requestPath);
+            if (in_array($action, ['copy', 'cut'], true) && is_array($items) && $currentDirectory) {
+                $pasted = 0;
+                $errors = 0;
                 foreach ($items as $itemName) {
-                    $srcFull = PathValidator::validateIn($root, $itemName);
-                    $destFull = $root . '/' . $requestPath . '/' . basename($itemName);
-                    if ($srcFull) {
-                        if ($action === 'copy') Clipboard::copy($srcFull, $destFull);
-                        elseif ($action === 'cut') Clipboard::cut($srcFull, $destFull);
-                    }
+                    $srcFull = PathValidator::validateIn($root, (string) $itemName);
+                    if (!$srcFull || !file_exists($srcFull)) { $errors++; continue; }
+                    $destFull = uniqueDestinationPath($currentDirectory, basename($srcFull));
+                    $result = $action === 'copy' ? Clipboard::copy($srcFull, $destFull) : Clipboard::cut($srcFull, $destFull);
+                    if ($result) $pasted++; else $errors++;
                 }
-                $msg = 'Operación completada.';
-                $msgType = 'success';
+                $msg = "$pasted elemento(s) pegado(s).";
+                if ($errors) $msg .= " $errors error(es).";
+                $msgType = ($pasted === 0 && $errors > 0) ? 'danger' : 'success';
             }
         }
 
@@ -357,6 +359,12 @@ include __DIR__ . '/views/layouts/main-header.php';
         <input type="search" class="form-control" id="explorerSearch" placeholder="Cerca per nom…" autocomplete="off">
     </div>
     <div class="d-flex gap-2 ms-auto">
+        <button class="btn btn-sm btn-outline-success d-none" type="button" id="pasteClipboardBtn" onclick="pasteClipboard()" title="Enganxa aquí">
+            <i class="bi bi-clipboard-check"></i> <span id="pasteClipboardLabel">Enganxa</span>
+        </button>
+        <button class="btn btn-sm btn-outline-secondary d-none" type="button" id="clearClipboardBtn" onclick="clearClipboard()" title="Buida el porta-retalls">
+            <i class="bi bi-x-lg"></i>
+        </button>
         <?php if ($library === 'movies'): ?>
         <div class="btn-group btn-group-sm" role="group" aria-label="Visualització">
             <button class="btn btn-outline-light active" type="button" id="gridViewBtn" onclick="setExplorerView('grid')" title="Graella"><i class="bi bi-grid"></i></button>
@@ -371,6 +379,8 @@ include __DIR__ . '/views/layouts/main-header.php';
 <?php if ($isAdmin): ?>
 <div class="selection-bar" id="selectionBar">
     <span id="selectedCount" class="text-muted small">0 seleccionats</span>
+    <button class="btn btn-sm btn-outline-light" onclick="clipboardCopySelected()"><i class="bi bi-clipboard-plus"></i> Copia</button>
+    <button class="btn btn-sm btn-outline-light" onclick="clipboardCutSelected()"><i class="bi bi-scissors"></i> Retalla</button>
     <button class="btn btn-sm btn-outline-danger" onclick="deleteSelected()"><i class="bi bi-trash"></i> Elimina</button>
     <?php if ($library === 'movies'): ?>
     <button class="btn btn-sm btn-outline-warning" onclick="openMergeVideoFolders()"><i class="bi bi-collection-play"></i> Agrupa pel·lícules</button>
@@ -436,19 +446,20 @@ include __DIR__ . '/views/layouts/main-header.php';
 
 <?php
 ob_start();
-if ($library === 'movies'):
 ?>
 document.addEventListener('DOMContentLoaded', function() {
+<?php if ($library === 'movies'): ?>
     var posterImages = document.querySelectorAll('.poster-thumb[data-query]');
     for (let start = 0; start < posterImages.length; start += 5) {
         setTimeout(function() {
             loadPosterBatch(posterImages, start, 5);
         }, (start / 5) * 250);
     }
+<?php endif; ?>
     initExplorerBrowser();
+    updatePasteButton();
 });
 <?php
-endif;
 $pageScript = ob_get_clean();
 
 include __DIR__ . '/views/layouts/main-footer.php';

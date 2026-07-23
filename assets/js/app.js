@@ -234,6 +234,64 @@ function selectedFolderItems() {
   });
 }
 
+// Clipboard (copiar/cortar y pegar dentro de la misma biblioteca)
+function currentExplorerPath() {
+  return new URLSearchParams(window.location.search).get('path') || '';
+}
+
+function getClipboard() {
+  try {
+    var raw = localStorage.getItem('fileClipboard');
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function setClipboard(action) {
+  var items = selectedLibraryItems();
+  if (!items.length) return;
+  var base = currentExplorerPath();
+  var fullPaths = items.map(function(name) { return base ? base + '/' + name : name; });
+  localStorage.setItem('fileClipboard', JSON.stringify({ library: window.library || '', action: action, items: fullPaths }));
+  updatePasteButton();
+}
+
+function clipboardCopySelected() { setClipboard('copy'); }
+function clipboardCutSelected() { setClipboard('cut'); }
+
+function clearClipboard() {
+  localStorage.removeItem('fileClipboard');
+  updatePasteButton();
+}
+
+function updatePasteButton() {
+  var pasteBtn = document.getElementById('pasteClipboardBtn');
+  var clearBtn = document.getElementById('clearClipboardBtn');
+  if (!pasteBtn || !clearBtn) return;
+  var data = getClipboard();
+  var visible = !!(data && data.library === (window.library || '') && data.items && data.items.length);
+  pasteBtn.classList.toggle('d-none', !visible);
+  clearBtn.classList.toggle('d-none', !visible);
+  if (visible) {
+    var label = document.getElementById('pasteClipboardLabel');
+    var verb = data.action === 'cut' ? 'Mou aquí' : 'Enganxa';
+    if (label) label.textContent = verb + ' (' + data.items.length + ')';
+  }
+}
+
+function pasteClipboard() {
+  var data = getClipboard();
+  if (!data || !data.items || !data.items.length) return;
+  submitHiddenForm(window.location.href, {
+    csrf_token: window.csrfToken || '',
+    clipboard_action: data.action,
+    clipboard_items: JSON.stringify(data.items),
+    clipboard_source: '1'
+  });
+  if (data.action === 'cut') clearClipboard();
+}
+
 function openMergeVideoFolders() {
   var folders = selectedFolderItems();
   if (folders.length < 2) {
