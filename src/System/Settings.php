@@ -11,12 +11,13 @@ class Settings
         return is_array($data) ? $data : [];
     }
 
-    public static function savePaths($movies, $music, $docs)
+    public static function savePaths($movies, $music, $docs, $images)
     {
         $paths = [
             'movies_path' => self::validDirectory($movies),
             'music_path' => self::validDirectory($music),
             'docs_path' => self::validDirectory($docs),
+            'images_path' => self::validDirectory($images),
         ];
         foreach ($paths as $path) {
             if ($path === null) return false;

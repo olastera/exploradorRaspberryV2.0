@@ -10,6 +10,7 @@ class Dashboard
             'Pel·lícules' => MEDIA_ROOT,
             'Música' => MEDIA_MUSIC,
             'Documents' => MEDIA_DOCS,
+            'Imatges' => MEDIA_IMAGES,
         ]);
         return [
             'uptime' => self::getUptime(),

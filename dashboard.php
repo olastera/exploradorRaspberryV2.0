@@ -35,7 +35,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $saved = Settings::savePaths(
             $_POST['movies_path'] ?? '',
             $_POST['music_path'] ?? '',
-            $_POST['docs_path'] ?? ''
+            $_POST['docs_path'] ?? '',
+            $_POST['images_path'] ?? ''
         );
         $adminMessage = $saved
             ? 'Les rutes s’han desat. S’aplicaran a partir de la pròxima petició.'
@@ -84,18 +85,21 @@ function countFiles($dir) {
 $moviesPath = FileExplorer::getLibraryRoot('movies');
 $musicPath = FileExplorer::getLibraryRoot('music');
 $docsPath = FileExplorer::getLibraryRoot('docs');
+$imagesPath = FileExplorer::getLibraryRoot('images');
 $moviesCount = countFiles($moviesPath);
 $musicCount = countFiles($musicPath);
 $docsCount = countFiles($docsPath);
+$imagesCount = countFiles($imagesPath);
 $diskFree = disk_free_space(MEDIA_ROOT);
 $diskTotal = disk_total_space(MEDIA_ROOT);
 $diskUsed = $diskTotal - $diskFree;
-$totalCount = $moviesCount + $musicCount + $docsCount;
+$totalCount = $moviesCount + $musicCount + $docsCount + $imagesCount;
 $users = UserManager::load();
 $libraryPercent = [
-    'movies' => $totalCount > 0 ? round($moviesCount / $totalCount * 100) : 33,
-    'music' => $totalCount > 0 ? round($musicCount / $totalCount * 100) : 33,
-    'docs' => $totalCount > 0 ? round($docsCount / $totalCount * 100) : 33,
+    'movies' => $totalCount > 0 ? round($moviesCount / $totalCount * 100) : 25,
+    'music' => $totalCount > 0 ? round($musicCount / $totalCount * 100) : 25,
+    'docs' => $totalCount > 0 ? round($docsCount / $totalCount * 100) : 25,
+    'images' => $totalCount > 0 ? round($imagesCount / $totalCount * 100) : 25,
 ];
 
 include __DIR__ . '/views/layouts/main-header.php';
@@ -141,6 +145,13 @@ include __DIR__ . '/views/layouts/main-header.php';
             </div>
             <div class="col-6 col-md-3">
                 <div class="stat-card text-center">
+                    <i aria-hidden="true" class="bi bi-image stat-icon text-danger d-block mb-1"></i>
+                    <div class="stat-value"><?php echo $imagesCount; ?></div>
+                    <div class="stat-label">Imatges</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card text-center">
                     <i aria-hidden="true" class="bi bi-hdd stat-icon text-warning d-block mb-1"></i>
                     <div class="stat-value"><?php echo round($diskUsed / 1073741824, 1); ?> GB</div>
                     <div class="stat-label">Usado de <?php echo round($diskTotal / 1073741824, 0); ?> GB</div>
@@ -154,12 +165,12 @@ include __DIR__ . '/views/layouts/main-header.php';
                     <h6 class="mb-3" style="font-weight:600;">Distribución por librería</h6>
                     <svg viewBox="0 0 200 200" style="width:100%;max-width:250px;display:block;margin:0 auto;">
                         <?php
-                        $colors = ['#3B82F6', '#10B981', '#F59E0B'];
-                        $vals = [$libraryPercent['movies'], $libraryPercent['music'], $libraryPercent['docs']];
+                        $colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444'];
+                        $vals = [$libraryPercent['movies'], $libraryPercent['music'], $libraryPercent['docs'], $libraryPercent['images']];
                         $totalPct = array_sum($vals) ?: 1;
                         $current = 0;
-                        $labels = ['Películas', 'Música', 'Documentos'];
-                        for ($i = 0; $i < 3; $i++):
+                        $labels = ['Películas', 'Música', 'Documentos', 'Imatges'];
+                        for ($i = 0; $i < 4; $i++):
                             $pct = $vals[$i] / $totalPct;
                             $angle = $pct * 360;
                             $start = $current;
@@ -309,6 +320,10 @@ include __DIR__ . '/views/layouts/main-header.php';
                         <div class="col-md-6">
                             <label class="form-label" for="docsPath">Documents</label>
                             <input class="form-control" id="docsPath" name="docs_path" value="<?php echo htmlspecialchars($docsPath, ENT_QUOTES); ?>" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="imagesPath">Imatges</label>
+                            <input class="form-control" id="imagesPath" name="images_path" value="<?php echo htmlspecialchars($imagesPath, ENT_QUOTES); ?>" required>
                         </div>
                         <div class="col-12">
                             <div class="form-text text-muted mb-3">Introdueix rutes absolutes que existeixin i siguin llegibles pel servidor web.</div>
@@ -518,7 +533,8 @@ if (isset($_GET['recent'])) {
     $all = array_merge(
         getRecentFiles($moviesPath, 'Pel·lícules', 5),
         getRecentFiles($musicPath, 'Música', 3),
-        getRecentFiles($docsPath, 'Documents', 3)
+        getRecentFiles($docsPath, 'Documents', 3),
+        getRecentFiles($imagesPath, 'Imatges', 3)
     );
     usort($all, fn($a, $b) => $b['mtime'] - $a['mtime']);
     echo json_encode(array_slice($all, 0, 10));

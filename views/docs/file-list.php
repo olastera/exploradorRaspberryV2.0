@@ -86,6 +86,9 @@
                             <?php if (in_array($ext, $audioExtensions, true)): ?>
                             <button onclick='moveLibraryItem(<?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>, "music")' class="btn btn-sm btn-outline-success px-2" title="Mou a Música"><i class="bi bi-music-note"></i></button>
                             <?php endif; ?>
+                            <?php if (in_array($ext, $imageExtensions, true)): ?>
+                            <button onclick='moveLibraryItem(<?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>, "images")' class="btn btn-sm btn-outline-info px-2" title="Mou a Imatges"><i class="bi bi-image"></i></button>
+                            <?php endif; ?>
                             <button onclick='deleteLibraryItem(<?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>)' class="btn btn-sm btn-outline-danger px-2" style="border-radius:6px;" title="Elimina"><i aria-hidden="true" class="bi bi-trash"></i></button>
                         <?php endif; ?>
                     </td>

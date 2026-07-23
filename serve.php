@@ -18,7 +18,7 @@ if (empty($file)) {
 }
 
 $library = $_GET['lib'] ?? 'movies';
-if (!in_array($library, ['movies', 'music', 'docs'], true)) {
+if (!in_array($library, ['movies', 'music', 'docs', 'images'], true)) {
     http_response_code(400);
     die('Invalid library');
 }
@@ -57,6 +57,7 @@ $mimeTypes = [
     'png' => 'image/png',
     'gif' => 'image/gif',
     'webp' => 'image/webp',
+    'bmp' => 'image/bmp',
     'pdf' => 'application/pdf',
     'zip' => 'application/zip',
     'rar' => 'application/x-rar-compressed',
@@ -70,7 +71,7 @@ $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
 $contentType = $mimeTypes[$ext] ?? 'application/octet-stream';
 $fileName = basename($filePath);
 $fileSize = filesize($filePath);
-$isPlayable = in_array($ext, ['mp4', 'mkv', 'avi', 'mov', 'webm', 'ogg', 'wmv', 'flv', 'm4v', 'ts', 'vob', 'mp3', 'flac', 'wav', 'm4a', 'aac']);
+$isPlayable = in_array($ext, ['mp4', 'mkv', 'avi', 'mov', 'webm', 'ogg', 'wmv', 'flv', 'm4v', 'ts', 'vob', 'mp3', 'flac', 'wav', 'm4a', 'aac', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp']);
 
 header('Content-Type: ' . $contentType);
 header('Content-Disposition: ' . ($isPlayable ? 'inline' : 'attachment') . '; filename="' . addcslashes($fileName, '"') . '"');

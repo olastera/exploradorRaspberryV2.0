@@ -6,10 +6,11 @@
     <?php if (isset($isAdmin) && $isAdmin): ?>
         <?php include __DIR__ . '/../partials/upload-modal.php'; ?>
         <?php include __DIR__ . '/../partials/new-folder-modal.php'; ?>
+        <?php include __DIR__ . '/../partials/image-lightbox-modal.php'; ?>
     <?php endif; ?>
 
     <script src="assets/vendor/bootstrap/bootstrap.bundle.min.js?v=5.3.0"></script>
-    <script src="assets/js/app.js?v=6"></script>
+    <script src="assets/js/app.js?v=7"></script>
     <script>
     var library = '<?php echo isset($library) ? $library : ''; ?>';
     var csrfToken = '<?php echo isset($csrfToken) ? $csrfToken : ''; ?>';

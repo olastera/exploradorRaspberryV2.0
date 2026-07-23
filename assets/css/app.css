@@ -166,6 +166,17 @@ a:hover { color: var(--accent-hover); }
   overflow: hidden;
   background: var(--card-bg);
 }
+.image-card-thumb {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: var(--card-bg);
+}
+.image-card-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 .movie-card-poster img {
   position: relative;
   z-index: 1;

@@ -119,6 +119,13 @@ function showPosterModal(data, query) {
   };
 }
 
+function openImageLightbox(url, title) {
+  document.getElementById('imageLightboxTitle').textContent = title || '';
+  document.getElementById('imageLightboxImg').src = url;
+  document.getElementById('imageLightboxDownload').href = url;
+  new bootstrap.Modal(document.getElementById('imageLightboxModal')).show();
+}
+
 function showMovieInfo(query) {
   fetch('imdb_search.php?q=' + encodeURIComponent(query))
     .then(function(response) {

@@ -228,6 +228,7 @@ $users = UserManager::load();
 $csrfToken = Csrf::token();
 $videoExtensions = FileExplorer::$videoExtensions;
 $audioExtensions = FileExplorer::$audioExtensions;
+$imageExtensions = FileExplorer::$imageExtensions;
 
 // Breadcrumbs
 $breadcrumbs = [];
@@ -244,11 +245,13 @@ $libraryIcons = [
     'movies' => 'film',
     'music' => 'music-note-beamed',
     'docs' => 'file-earmark-text',
+    'images' => 'image',
 ];
 $libraryNames = [
     'movies' => 'Pel·lícules',
     'music' => 'Música',
     'docs' => 'Documents',
+    'images' => 'Imatges',
 ];
 
 // Detect upload actions
@@ -261,7 +264,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAdmin && isset($_FILES['upload_f
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAdmin && Csrf::verify($_POST['csrf_token'] ?? '') && isset($_POST['move_item']) && isset($_POST['move_target'])) {
     $itemName = basename($_POST['move_item']);
     $targetLib = $_POST['move_target'];
-    if (!in_array($targetLib, ['movies', 'music', 'docs'], true) || $targetLib === $library) {
+    if (!in_array($targetLib, ['movies', 'music', 'docs', 'images'], true) || $targetLib === $library) {
         $msg = 'La biblioteca de destinació no és vàlida.';
         $msgType = 'danger';
     } else {
@@ -283,7 +286,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAdmin && Csrf::verify($_POST['cs
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isAdmin && Csrf::verify($_POST['csrf_token'] ?? '') && isset($_POST['move_selected']) && isset($_POST['move_items']) && isset($_POST['move_target'])) {
     $items = json_decode($_POST['move_items'], true);
     $targetLib = $_POST['move_target'];
-    if (!is_array($items) || !in_array($targetLib, ['movies', 'music', 'docs'], true) || $targetLib === $library) {
+    if (!is_array($items) || !in_array($targetLib, ['movies', 'music', 'docs', 'images'], true) || $targetLib === $library) {
         $msg = 'La selecció o la biblioteca de destinació no és vàlida.';
         $msgType = 'danger';
     } else {
@@ -345,7 +348,7 @@ include __DIR__ . '/views/layouts/main-header.php';
         </ol>
     </nav>
     <div class="d-flex gap-2">
-        <?php if ($isAdmin && ($library === 'docs' || $library === 'music')): ?>
+        <?php if ($isAdmin && in_array($library, ['docs', 'music', 'images'], true)): ?>
             <button class="btn btn-sm btn-outline-primary" onclick="showUploadModal()"><i aria-hidden="true" class="bi bi-upload"></i> Puja</button>
             <button class="btn btn-sm btn-outline-secondary" onclick="showNewFolderModal()"><i aria-hidden="true" class="bi bi-folder-plus"></i> Carpeta</button>
         <?php endif; ?>
@@ -385,7 +388,7 @@ include __DIR__ . '/views/layouts/main-header.php';
     <?php if ($library === 'movies'): ?>
     <button class="btn btn-sm btn-outline-warning" onclick="openMergeVideoFolders()"><i class="bi bi-collection-play"></i> Agrupa pel·lícules</button>
     <?php endif; ?>
-    <?php foreach (['movies' => 'Pel·lícules', 'music' => 'Música', 'docs' => 'Documents'] as $targetKey => $targetLabel): ?>
+    <?php foreach (['movies' => 'Pel·lícules', 'music' => 'Música', 'docs' => 'Documents', 'images' => 'Imatges'] as $targetKey => $targetLabel): ?>
         <?php if ($targetKey !== $library): ?>
         <button class="btn btn-sm btn-outline-primary" onclick="moveSelected('<?php echo $targetKey; ?>')"><i class="bi bi-folder-symlink"></i> Mou a <?php echo $targetLabel; ?></button>
         <?php endif; ?>
@@ -431,6 +434,8 @@ include __DIR__ . '/views/layouts/main-header.php';
     <?php include __DIR__ . '/views/music/album-grid.php'; ?>
 <?php elseif ($library === 'docs'): ?>
     <?php include __DIR__ . '/views/docs/file-list.php'; ?>
+<?php elseif ($library === 'images'): ?>
+    <?php include __DIR__ . '/views/images/image-grid.php'; ?>
 <?php endif; ?>
 </div>
 

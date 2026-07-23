@@ -17,6 +17,8 @@ class FileExplorer
                 return MEDIA_MUSIC;
             case 'docs':
                 return MEDIA_DOCS;
+            case 'images':
+                return MEDIA_IMAGES;
             case 'movies':
             default:
                 return MEDIA_ROOT . '/' . MEDIA_MOVIES;

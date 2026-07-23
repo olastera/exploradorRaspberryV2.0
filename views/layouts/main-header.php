@@ -9,7 +9,7 @@
     <title><?php echo $pageTitle; ?></title>
     <link href="assets/vendor/bootstrap/bootstrap.min.css?v=5.3.0" rel="stylesheet">
     <link rel="stylesheet" href="assets/vendor/bootstrap-icons/bootstrap-icons.min.css?v=1.10.0">
-    <link rel="stylesheet" href="assets/css/app.css?v=7">
+    <link rel="stylesheet" href="assets/css/app.css?v=8">
 </head>
 <body>
     <button class="mobile-menu-btn" type="button" onclick="toggleSidebar()" aria-label="Abrir menú" aria-controls="mainSidebar">
@@ -38,6 +38,10 @@
             <a href="index.php?lib=docs" class="sidebar-link <?php echo (basename($_SERVER['PHP_SELF']) === 'index.php' && isset($_GET['lib']) && $_GET['lib'] === 'docs') ? 'active' : ''; ?>">
                 <i aria-hidden="true" class="bi bi-file-earmark-text"></i>
                 <span>Documents</span>
+            </a>
+            <a href="index.php?lib=images" class="sidebar-link <?php echo (basename($_SERVER['PHP_SELF']) === 'index.php' && isset($_GET['lib']) && $_GET['lib'] === 'images') ? 'active' : ''; ?>">
+                <i aria-hidden="true" class="bi bi-image"></i>
+                <span>Imatges</span>
             </a>
             <?php if (isset($isAdmin) && $isAdmin): ?>
             <hr style="border-color:var(--border);margin:0.5rem 0;">

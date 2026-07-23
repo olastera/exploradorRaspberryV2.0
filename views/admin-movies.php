@@ -76,6 +76,11 @@
                     <button class="btn btn-light" onclick='moveLibraryItem(<?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>, "docs")' title="Mou a Documents">
                         <i aria-hidden="true" class="bi bi-file-earmark-text"></i>
                     </button>
+                    <?php if (in_array($ext, $imageExtensions, true)): ?>
+                    <button class="btn btn-light" onclick='moveLibraryItem(<?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>, "images")' title="Mou a Imatges">
+                        <i aria-hidden="true" class="bi bi-image"></i>
+                    </button>
+                    <?php endif; ?>
                     <button class="btn btn-light" onclick='deleteLibraryItem(<?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>)' title="Elimina">
                         <i aria-hidden="true" class="bi bi-trash" style="color:#dc2626"></i>
                     </button>
@@ -103,6 +108,9 @@
                     <button class="btn btn-sm btn-outline-success" onclick='moveLibraryItem(<?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>, "music")' title="Mou a Música"><i class="bi bi-music-note"></i></button>
                     <?php endif; ?>
                     <button class="btn btn-sm btn-outline-primary" onclick='moveLibraryItem(<?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>, "docs")' title="Mou a Documents"><i class="bi bi-file-earmark-text"></i></button>
+                    <?php if (in_array($ext, $imageExtensions, true)): ?>
+                    <button class="btn btn-sm btn-outline-info" onclick='moveLibraryItem(<?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>, "images")' title="Mou a Imatges"><i class="bi bi-image"></i></button>
+                    <?php endif; ?>
                     <?php if ($isVideo && $ext !== 'mp4' && substr(pathinfo($file, PATHINFO_FILENAME), -4) !== '_web'): ?>
                     <button class="btn btn-sm btn-outline-warning" onclick='convertToMp4(<?php echo htmlspecialchars(json_encode(($relativePath ? $relativePath . '/' : '') . $file), ENT_QUOTES); ?>)' title="Converteix a MP4"><i class="bi bi-arrow-repeat"></i></button>
                     <?php endif; ?>

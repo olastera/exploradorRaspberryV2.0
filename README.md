@@ -1,10 +1,11 @@
 # Explorador Raspberry V2
 
-Explorador web privat per gestionar una biblioteca de pel·lícules, música i documents des d'una Raspberry Pi. Està desenvolupat amb PHP 8, JavaScript i Bootstrap, sense framework ni procés de compilació.
+Explorador web privat per gestionar una biblioteca de pel·lícules, música, documents i imatges des d'una Raspberry Pi. Està desenvolupat amb PHP 8, JavaScript i Bootstrap, sense framework ni procés de compilació.
 
 ## Funcions
 
-- Navegació per tres biblioteques configurables.
+- Navegació per quatre biblioteques configurables (pel·lícules, música, documents, imatges).
+- Galeria d'imatges amb miniatures generades i cachejades al servidor (GD), correcció d'orientació EXIF i visor a mida completa.
 - Vista de graella i llista, cerca i paginació.
 - Portades i metadades de pel·lícules mitjançant IMDb i OMDb.
 - Caché de fitxes completes durant 30 dies.
@@ -24,7 +25,7 @@ Explorador web privat per gestionar una biblioteca de pel·lícules, música i d
 - Raspberry Pi o servidor Linux.
 - Apache 2 amb **mod_rewrite**.
 - PHP 8.0 o superior.
-- Extensions PHP: JSON, Zip i OpenSSL.
+- Extensions PHP: JSON, Zip, OpenSSL i GD (miniatures de la biblioteca d'Imatges). Opcional: exif (corregeix l'orientació de fotos de mòbil).
 - FFmpeg i FFprobe per a les conversions.
 - Permisos de lectura i escriptura sobre les biblioteques administrades.
 
@@ -60,7 +61,7 @@ sudo chmod -R 700 storage
 Les variables disponibles es documenten a **.env_default**:
 
 - MEDIA_ROOT: directori base inicial.
-- MEDIA_MOVIES, MEDIA_MUSIC, MEDIA_DOCS: ubicacions inicials.
+- MEDIA_MOVIES, MEDIA_MUSIC, MEDIA_DOCS, MEDIA_IMAGES: ubicacions inicials.
 - TURNSTILE_SITE_KEY, TURNSTILE_SECRET_KEY: protecció de l'accés.
 - OMDB_API_KEY: sinopsi, valoració, gènere, durada i portada alternativa.
 - BOOTSTRAP_ADMIN_USER, BOOTSTRAP_ADMIN_PASSWORD: compte inicial.
@@ -96,6 +97,7 @@ index.php      explorador principal
 dashboard.php  tauler i administració
 convert.php    API de conversions
 serve.php      servidor autenticat de fitxers
+thumb.php      miniatures d'Imatges (GD, només admin)
 ~~~
 
 ## Llicència
