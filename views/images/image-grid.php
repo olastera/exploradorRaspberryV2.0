@@ -72,8 +72,6 @@ $imageFiles = array_values(array_filter($files, function ($f) use ($imageExtensi
                     <button class="btn btn-sm btn-outline-light" onclick='copyToClipboard(<?php echo htmlspecialchars(json_encode($fileUrl), ENT_QUOTES); ?>)' title="Copia URL"><i class="bi bi-link"></i></button>
                     <?php if ($isAdmin): ?>
                     <button class="btn btn-sm btn-outline-light" onclick='showRenameModal(<?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>)' title="Canvia el nom"><i class="bi bi-pencil"></i></button>
-                    <button class="btn btn-sm btn-outline-success" onclick='moveLibraryItem(<?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>, "movies")' title="Mou a Pel·lícules"><i class="bi bi-film"></i></button>
-                    <button class="btn btn-sm btn-outline-success" onclick='moveLibraryItem(<?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>, "music")' title="Mou a Música"><i class="bi bi-music-note"></i></button>
                     <button class="btn btn-sm btn-outline-primary" onclick='moveLibraryItem(<?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>, "docs")' title="Mou a Documents"><i class="bi bi-file-earmark-text"></i></button>
                     <button class="btn btn-sm btn-outline-danger" onclick='deleteLibraryItem(<?php echo htmlspecialchars(json_encode($file), ENT_QUOTES); ?>)' title="Elimina"><i class="bi bi-trash"></i></button>
                     <?php endif; ?>
