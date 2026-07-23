@@ -22,7 +22,7 @@ No hay `.env` de ejemplo único: conviven `.env_default` (plantilla principal, d
 
 - **index.php**: explorador principal. Resuelve la biblioteca activa (`lib`), fuerza `movies` para no-admins, gestiona todas las acciones POST (borrar, renombrar, portapapeles copiar/cortar, agrupar carpetas de vídeo, extraer vídeos, subir archivos, mover entre bibliotecas, CRUD de usuarios) y delega el listado a `FileExplorer`. Incluye funciones locales `deleteRecursive`, `uniqueDestinationPath`, `removeEmptyDirectories`, `handleUpload`.
 - **dashboard.php**: panel de administración (solo admin). Tres pestañas: Biblioteca (contadores, gráfico de distribución SVG, archivos recientes), Sistema (CPU/RAM/discos/temperatura/procesos vía `Dashboard`), Administración (rutas de bibliotecas vía `Settings`, gestión de usuarios vía `UserManager`). Expone endpoints AJAX propios en el mismo archivo: `?ajax=1` (stats), `?processes=1` (procesos), `?recent=1` (archivos recientes); son de solo lectura y no llevan token CSRF, pero requieren sesión de admin.
-- **conversiones.php**: vista de la cola de conversiones FFmpeg (solo admin); toda la lógica de refresco/cancelación es JS que llama a `convert.php`.
+- **conversiones.php**: vista de la cola de conversiones FFmpeg (solo admin); toda la lógica de refresco/cancelación es JS que llama a `convert.php`. Ese JS vive en `$pageScript`, una única cadena PHP con comillas simples escapadas (`\'`) que main-footer.php vuelca dentro de un `<script>`. Es un patrón frágil: un `php -l` correcto no garantiza que el JS generado sea válido — un `'` sin escapar dentro de un atributo `onclick` (p. ej. `href='algo'`) rompe el `<script>` entero de forma silenciosa (sin excepción capturable), dejando la página bloqueada en "Cargando…" porque ni `refreshList()` ni el listener de `DOMContentLoaded` llegan a definirse. Si se toca este bloque, preferir entidades HTML (`&#39;`) para comillas anidadas en vez de escaparlas como comilla literal.
 - **convert.php**: API JSON de conversiones (`list`, `status`, `start`, `delete`, `cancel`, `gentoken`). `start`/`delete`/`cancel` exigen POST + CSRF.
 - **serve.php**: entrega archivos con soporte HTTP Range (streaming de vídeo/audio) y `Content-Disposition` según tipo. Acepta autenticación por sesión o por `token` (ver más abajo).
 - **imdb_search.php**: API pública (sin auth) de metadatos de películas, usada por las portadas y el botón Info. No mutar: solo GET, sin CSRF por diseño.
@@ -100,6 +100,8 @@ for f in $(find . -type f -name '*.php' -not -path './assets/vendor/*' | sort); 
 node --check assets/js/app.js
 ~~~
 
+Si se toca `$pageScript` (JS embebido en PHP) en `index.php`, `dashboard.php` o `conversiones.php`, `php -l` **no detecta errores de sintaxis en el JS generado**. Renderizar la página (por ejemplo incluyéndola desde CLI con una sesión simulada), extraer el contenido entre `<script>...</script>` y pasarlo por `node --check` antes de dar el cambio por bueno.
+
 Comprobar además, según el cambio:
 
 - Inicio y cierre de sesión, y timeout de sesión si se toca `Auth`.
@@ -131,3 +133,4 @@ Variables (documentadas en **.env_default** y **.env.example**, deben mantenerse
 - `Turnstile::verify()` falla abierto si no hay `TURNSTILE_SECRET_KEY`; comportamiento intencional para instalaciones sin Turnstile.
 - `docs/superpowers/` y `.superpowers/sdd/` son artefactos de una sesión de planificación/ejecución anterior (rediseño de la interfaz); son historial, no documentación viva a mantener actualizada salvo que se esté continuando esa misma tarea.
 - El proyecto no dispone actualmente de una suite automatizada completa; lint (`php -l`, `node --check`) y pruebas manuales focalizadas son obligatorios.
+- Despliegue real (Apache, `/etc/apache2/sites-enabled/000-default-le-ssl.conf`): la ruta **`/explorador/`** es un `Alias` directo a este directorio (`/mnt/disco/explorador/`) — es el despliegue que corresponde a este código, y sus peticiones quedan en `/var/log/apache2/access.log` y `error.log` (log general del vhost, no uno propio). Las rutas **`/peliculas/`** y **`/transmision/`** son `ProxyPass` hacia `http://127.0.0.1:8060/`, un proceso/instancia **distinto**, con su propio log (`/var/log/apache2/file-explorer-access.log`); no asumir que ese tráfico corresponde a cambios hechos aquí. Al depurar en producción, comprobar siempre `/explorador/` y su log general antes de sacar conclusiones.

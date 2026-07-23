@@ -169,7 +169,23 @@ function loadPosterBatch(posterImages, startIndex, batchSize) {
 
 // Convert functions
 function convertToMp4(file) {
-  submitHiddenForm('convert.php', { action: 'start', file: file, _token: window.csrfToken || '' });
+  if (!confirm('Vols convertir «' + file + '» a MP4? Podràs seguir el progrés a Conversions.')) return;
+  var form = new FormData();
+  form.append('action', 'start');
+  form.append('file', file);
+  form.append('csrf_token', window.csrfToken || '');
+  fetch('convert.php', { method: 'POST', body: form })
+    .then(function(r) { return r.json().then(function(data) { return { ok: r.ok, data: data }; }); })
+    .then(function(result) {
+      if (!result.ok) {
+        alert(result.data.error || 'No s\'ha pogut iniciar la conversió.');
+        return;
+      }
+      window.location.href = 'conversiones.php';
+    })
+    .catch(function() {
+      alert('No s\'ha pogut iniciar la conversió.');
+    });
 }
 
 function submitHiddenForm(action, values) {

@@ -77,7 +77,7 @@ function refreshList() {
                     statusBadge = \'<span class="badge bg-primary"><i aria-hidden="true" class="bi bi-arrow-repeat me-1"></i>Convirtiendo</span>\';
                     progressBar = \'<div class="progress"><div class="progress-bar progress-bar-striped progress-bar-animated" style="width:\' + c.progress + \'%">\' + c.progress + \'%</div></div>\';
                     actionBtns = \'<button class="btn btn-sm btn-outline-danger me-1" data-id="\' + escapeHtml(c.id) + \'" onclick="cancelConversion(this.dataset.id)"><i aria-hidden="true" class="bi bi-stop-fill"></i></button>\';
-                    actionBtns += \'<button class="btn btn-sm btn-outline-secondary" onclick="window.location.href=\'index.php\'"><i aria-hidden="true" class="bi bi-folder"></i> Ir</button>\';
+                    actionBtns += \'<button class="btn btn-sm btn-outline-secondary" onclick="window.location.href=&#39;index.php&#39;"><i aria-hidden="true" class="bi bi-folder"></i> Ir</button>\';
                     iconHtml = \'<i aria-hidden="true" class="bi bi-arrow-repeat text-primary conv-icon"></i>\';
                     hasRunning = true;
                 } else if (c.status === \'completed\') {
