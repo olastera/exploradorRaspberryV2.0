@@ -5,6 +5,7 @@ use App\Auth\Csrf;
 use App\Auth\UserManager;
 use App\Imdb\FileCache;
 use App\Media\FileExplorer;
+use App\Media\MoviesRefreshJob;
 use App\Media\PosterCache;
 use App\Media\Thumbnailer;
 use App\System\Dashboard;
@@ -27,6 +28,12 @@ if (isset($_GET['processes'])) {
     header('Content-Type: application/json');
     header('Cache-Control: no-store');
     echo json_encode(Dashboard::getProcesses(15));
+    exit;
+}
+if (isset($_GET['movies_refresh_status'])) {
+    header('Content-Type: application/json');
+    header('Cache-Control: no-store');
+    echo json_encode(MoviesRefreshJob::status());
     exit;
 }
 
@@ -74,6 +81,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $cleared = PosterCache::clear() + FileCache::clear() + Thumbnailer::clear();
         $adminMessage = "S'han eliminat {$cleared} arxius de tota la memòria cau (carátulas, metadades IMDb i miniatures).";
         $adminMessageType = 'success';
+    } elseif (isset($_POST['refresh_movies_start'])) {
+        $started = MoviesRefreshJob::start();
+        $adminMessage = $started
+            ? "S'ha iniciat l'actualització d'informació i carátulas de pel·lícules en segon pla."
+            : 'Ja hi ha una actualització en curs.';
+        $adminMessageType = $started ? 'success' : 'warning';
     }
 }
 
@@ -310,6 +323,25 @@ include __DIR__ . '/views/layouts/main-header.php';
                 </table>
             </div>
         </div>
+        <div class="card-custom mt-3 p-3" id="moviesRefreshCard">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                <h5 class="mb-0"><i class="bi bi-arrow-repeat me-2 text-primary"></i>Actualitza pel·lícules</h5>
+                <form method="post" id="moviesRefreshForm">
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken, ENT_QUOTES); ?>">
+                    <button class="btn btn-sm btn-outline-primary" type="submit" name="refresh_movies_start" value="1" id="moviesRefreshBtn"><i class="bi bi-play-fill me-1"></i>Actualitza informació i carátulas</button>
+                </form>
+            </div>
+            <div class="small text-muted mb-2">Busca informació i descarrega la carátula de cada pel·lícula que encara no tinguem completa (traduïda al català) o cacheada. Es fa en segon pla, pot trigar una estona segons quantes pel·lícules faltin.</div>
+            <div id="moviesRefreshProgress" class="d-none">
+                <div class="d-flex justify-content-between small text-muted mb-1">
+                    <span id="moviesRefreshText">—</span>
+                    <span id="moviesRefreshCount">0 / 0</span>
+                </div>
+                <div class="progress" style="height:8px;background:var(--bg);border-radius:4px;">
+                    <div class="progress-bar bg-primary" id="moviesRefreshBar" style="width:0%;border-radius:4px;"></div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="tab-pane fade" id="administracio">
@@ -499,6 +531,37 @@ document.querySelectorAll("[data-bs-toggle=\"tab\"]").forEach(function(tab) {
     tab.addEventListener("shown.bs.tab", refreshProcesses);
 });
 setInterval(refreshProcesses, 3000);
+
+function refreshMoviesStatus() {
+    var systemTab = document.getElementById("sistema");
+    if (!systemTab || !systemTab.classList.contains("active")) return;
+    fetch("dashboard.php?movies_refresh_status=1", { cache: "no-store" })
+        .then(function(response) { return response.json(); })
+        .then(function(status) {
+            var progress = document.getElementById("moviesRefreshProgress");
+            var btn = document.getElementById("moviesRefreshBtn");
+            if (!progress || !btn) return;
+            if (!status.running && !status.total) {
+                progress.classList.add("d-none");
+                btn.disabled = false;
+                return;
+            }
+            progress.classList.remove("d-none");
+            btn.disabled = !!status.running;
+            var total = status.total || 0;
+            var processed = status.processed || 0;
+            var percent = total > 0 ? Math.round((processed / total) * 100) : 0;
+            document.getElementById("moviesRefreshBar").style.width = percent + "%";
+            document.getElementById("moviesRefreshCount").textContent = processed + " / " + total;
+            document.getElementById("moviesRefreshText").textContent = status.running
+                ? (status.current || "Preparant…")
+                : (status.error ? "Error: " + status.error : "Acabat");
+        });
+}
+document.querySelectorAll("[data-bs-toggle=\"tab\"]").forEach(function(tab) {
+    tab.addEventListener("shown.bs.tab", refreshMoviesStatus);
+});
+setInterval(refreshMoviesStatus, 3000);
 
 fetch("dashboard.php?recent=1")
     .then(function(r) { return r.json(); })
