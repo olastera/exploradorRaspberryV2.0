@@ -271,6 +271,9 @@ a:hover { color: var(--accent-hover); }
 .process-table { font-variant-numeric: tabular-nums; }
 .process-table th { color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; }
 .process-command { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--text); }
+.temp-ok { color: #22c55e; font-weight: 600; }
+.temp-warn { color: #f59e0b; font-weight: 600; }
+.temp-hot { color: #ef4444; font-weight: 600; }
 .process-live-dot {
   display: inline-block;
   width: 0.5rem;

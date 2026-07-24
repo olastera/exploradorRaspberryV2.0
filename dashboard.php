@@ -323,29 +323,32 @@ include __DIR__ . '/views/layouts/main-header.php';
                 </table>
             </div>
         </div>
-        <div class="card-custom mt-3 p-3" id="moviesRefreshCard">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
-                <h5 class="mb-0"><i class="bi bi-arrow-repeat me-2 text-primary"></i>Actualitza pel·lícules</h5>
-                <form method="post" id="moviesRefreshForm">
-                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken, ENT_QUOTES); ?>">
-                    <button class="btn btn-sm btn-outline-primary" type="submit" name="refresh_movies_start" value="1" id="moviesRefreshBtn"><i class="bi bi-play-fill me-1"></i>Actualitza informació i carátulas</button>
-                </form>
-            </div>
-            <div class="small text-muted mb-2">Busca informació i descarrega la carátula de cada pel·lícula que encara no tinguem completa (traduïda al català) o cacheada. Es fa en segon pla, pot trigar una estona segons quantes pel·lícules faltin.</div>
-            <div id="moviesRefreshProgress" class="d-none">
-                <div class="d-flex justify-content-between small text-muted mb-1">
-                    <span id="moviesRefreshText">—</span>
-                    <span id="moviesRefreshCount">0 / 0</span>
-                </div>
-                <div class="progress" style="height:8px;background:var(--bg);border-radius:4px;">
-                    <div class="progress-bar bg-primary" id="moviesRefreshBar" style="width:0%;border-radius:4px;"></div>
-                </div>
-            </div>
-        </div>
     </div>
 
     <div class="tab-pane fade" id="administracio">
         <div class="row g-4">
+            <div class="col-12">
+                <div class="card-custom p-4" id="moviesRefreshCard">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                        <h5 class="mb-0"><i class="bi bi-arrow-repeat me-2 text-primary"></i>Actualitza pel·lícules</h5>
+                        <form method="post" id="moviesRefreshForm">
+                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken, ENT_QUOTES); ?>">
+                            <button class="btn btn-sm btn-outline-primary" type="submit" name="refresh_movies_start" value="1" id="moviesRefreshBtn"><i class="bi bi-play-fill me-1"></i>Actualitza informació i carátulas</button>
+                        </form>
+                    </div>
+                    <div class="small text-muted mb-2">Busca informació i descarrega la carátula de cada pel·lícula que encara no tinguem completa (traduïda al català) o cacheada. Es fa en segon pla, pot trigar una estona segons quantes pel·lícules faltin.</div>
+                    <div id="moviesRefreshProgress" class="d-none">
+                        <div class="d-flex justify-content-between small text-muted mb-1">
+                            <span id="moviesRefreshText">—</span>
+                            <span id="moviesRefreshCount">0 / 0</span>
+                        </div>
+                        <div class="progress" style="height:8px;background:var(--bg);border-radius:4px;">
+                            <div class="progress-bar bg-primary" id="moviesRefreshBar" style="width:0%;border-radius:4px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="col-12">
                 <div class="card-custom p-4">
                     <h5 class="mb-3"><i class="bi bi-folder2-open me-2 text-primary"></i>Rutes de les biblioteques</h5>
@@ -465,9 +468,14 @@ function refreshDashboard() {
         .then(function(stats) {
             var cpuClass = stats.cpu > 80 ? "bg-danger" : (stats.cpu > 50 ? "bg-warning" : "bg-primary");
             var ramClass = stats.memory.percent > 80 ? "bg-danger" : (stats.memory.percent > 60 ? "bg-warning" : "bg-info");
+            var cpuSub = null, cpuSubClass = "text-muted";
+            if (stats.cpuTemp !== null && stats.cpuTemp !== undefined) {
+                cpuSub = stats.cpuTemp + "°C";
+                cpuSubClass = stats.cpuTemp > 70 ? "temp-hot" : (stats.cpuTemp > 55 ? "temp-warn" : "temp-ok");
+            }
             var html = "";
             var cards = [
-                { label: "CPU", value: stats.cpu + "%", bar: stats.cpu, cls: cpuClass },
+                { label: "CPU", value: stats.cpu + "%", bar: stats.cpu, cls: cpuClass, sub: cpuSub, subClass: cpuSubClass },
                 { label: "RAM", value: stats.memory.percent + "%", bar: stats.memory.percent, cls: ramClass, sub: stats.memory.used + " / " + stats.memory.total }
             ];
             (stats.disks || []).forEach(function(disk, index) {
@@ -485,7 +493,7 @@ function refreshDashboard() {
                 html += "<div class=\"col-md-6\"><div class=\"card-custom p-3\">";
                 html += "<div class=\"d-flex justify-content-between mb-1\"><span class=\"text-muted small\">" + c.label + "</span><span class=\"fw-bold\">" + c.value + "</span></div>";
                 if (!c.noBar) html += "<div class=\"progress\" style=\"height:8px;background:var(--bg);border-radius:4px;\"><div class=\"progress-bar " + c.cls + "\" style=\"width:" + c.bar + "%;border-radius:4px;\"></div></div>";
-                if (c.sub) html += "<div class=\"mt-1 small text-muted\">" + c.sub + "</div>";
+                if (c.sub) html += "<div class=\"mt-1 small " + (c.subClass || "text-muted") + "\">" + c.sub + "</div>";
                 html += "</div></div>";
             });
             document.getElementById("systemStats").innerHTML = html;
@@ -533,8 +541,8 @@ document.querySelectorAll("[data-bs-toggle=\"tab\"]").forEach(function(tab) {
 setInterval(refreshProcesses, 3000);
 
 function refreshMoviesStatus() {
-    var systemTab = document.getElementById("sistema");
-    if (!systemTab || !systemTab.classList.contains("active")) return;
+    var adminTab = document.getElementById("administracio");
+    if (!adminTab || !adminTab.classList.contains("active")) return;
     fetch("dashboard.php?movies_refresh_status=1", { cache: "no-store" })
         .then(function(response) { return response.json(); })
         .then(function(status) {
