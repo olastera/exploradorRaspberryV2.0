@@ -12,7 +12,9 @@ class ImdbSearch
         $cached = FileCache::get($cacheKey);
         if ($cached !== null) {
             if (FileCache::isComplete($cached) || empty($cached['imdb_id'])) {
-                return $cached;
+                $migrated = self::withLocalPoster($cacheKey, $cached);
+                if ($migrated !== $cached) FileCache::set($cacheKey, $migrated);
+                return $migrated;
             }
             $enriched = self::withLocalPoster($cacheKey, self::enrichFromOmdb($cached));
             FileCache::set($cacheKey, $enriched);
