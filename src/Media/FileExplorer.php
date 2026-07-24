@@ -79,6 +79,22 @@ class FileExplorer
         ];
     }
 
+    public static function countFiles($directoryPath)
+    {
+        $items = @scandir($directoryPath);
+        if ($items === false) return 0;
+
+        $count = 0;
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..') continue;
+            if ($item[0] === '.') continue;
+            if (pathinfo($item, PATHINFO_EXTENSION) === 'php') continue;
+            if (is_dir($directoryPath . DIRECTORY_SEPARATOR . $item)) continue;
+            $count++;
+        }
+        return $count;
+    }
+
     public static function formatSize($bytes)
     {
         if ($bytes >= 1073741824) return round($bytes / 1073741824, 1) . ' GB';

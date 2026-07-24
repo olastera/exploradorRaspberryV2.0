@@ -46,6 +46,15 @@ class Thumbnailer
         return $saved ? $thumbPath : null;
     }
 
+    public static function clear()
+    {
+        $count = 0;
+        foreach (glob(STORAGE_DIR . '/cache/thumbs/*') as $file) {
+            if (is_file($file) && @unlink($file)) $count++;
+        }
+        return $count;
+    }
+
     private static function loadImage($path)
     {
         $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));

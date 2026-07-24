@@ -3,7 +3,10 @@ require_once __DIR__ . '/config/bootstrap.php';
 use App\Auth\Auth;
 use App\Auth\Csrf;
 use App\Auth\UserManager;
+use App\Imdb\FileCache;
 use App\Media\FileExplorer;
+use App\Media\PosterCache;
+use App\Media\Thumbnailer;
 use App\System\Dashboard;
 use App\System\Settings;
 
@@ -63,6 +66,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $saved = UserManager::delete($_POST['user_delete_name']);
         $adminMessage = $saved ? 'Usuari eliminat.' : 'No es pot eliminar l’últim administrador.';
         $adminMessageType = $saved ? 'success' : 'danger';
+    } elseif (isset($_POST['clear_poster_cache'])) {
+        $cleared = PosterCache::clear();
+        $adminMessage = "S'han eliminat {$cleared} carátulas de la memòria cau.";
+        $adminMessageType = 'success';
+    } elseif (isset($_POST['clear_all_cache'])) {
+        $cleared = PosterCache::clear() + FileCache::clear() + Thumbnailer::clear();
+        $adminMessage = "S'han eliminat {$cleared} arxius de tota la memòria cau (carátulas, metadades IMDb i miniatures).";
+        $adminMessageType = 'success';
     }
 }
 
@@ -330,6 +341,22 @@ include __DIR__ . '/views/layouts/main-header.php';
                             <button class="btn btn-primary" type="submit"><i class="bi bi-save me-1"></i>Desa les rutes</button>
                         </div>
                     </form>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="card-custom p-4">
+                    <h5 class="mb-3"><i class="bi bi-hdd-stack me-2 text-primary"></i>Memòria cau</h5>
+                    <div class="d-flex flex-wrap gap-2">
+                        <form method="post" onsubmit="return confirm('Vols buidar la memòria cau de carátulas?');">
+                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken, ENT_QUOTES); ?>">
+                            <button class="btn btn-outline-secondary" type="submit" name="clear_poster_cache" value="1"><i class="bi bi-image me-1"></i>Buida carátulas</button>
+                        </form>
+                        <form method="post" onsubmit="return confirm('Vols buidar TOTA la memòria cau (carátulas, metadades IMDb i miniatures)?');">
+                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken, ENT_QUOTES); ?>">
+                            <button class="btn btn-outline-danger" type="submit" name="clear_all_cache" value="1"><i class="bi bi-trash3 me-1"></i>Buida tota la caché</button>
+                        </form>
+                    </div>
                 </div>
             </div>
 

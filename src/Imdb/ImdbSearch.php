@@ -14,7 +14,7 @@ class ImdbSearch
             if (FileCache::isComplete($cached) || empty($cached['imdb_id'])) {
                 return $cached;
             }
-            $enriched = self::enrichFromOmdb($cached);
+            $enriched = self::withLocalPoster($cacheKey, self::enrichFromOmdb($cached));
             FileCache::set($cacheKey, $enriched);
             return $enriched;
         }
@@ -23,7 +23,21 @@ class ImdbSearch
         if ($result['found']) {
             $result = self::enrichFromOmdb($result);
         }
+        $result = self::withLocalPoster($cacheKey, $result);
         FileCache::set($cacheKey, $result);
+        return $result;
+    }
+
+    // Sustituye la URL remota del póster por un proxy local (poster.php) para que
+    // el navegador la pida a nuestro servidor y quede cacheada en disco (ver PosterCache).
+    // El original se guarda en poster_source: poster.php lo necesita para descargar
+    // la imagen la primera vez (o de nuevo si se vacía la caché de carátulas).
+    private static function withLocalPoster($cacheKey, $result)
+    {
+        if (!empty($result['poster']) && strpos($result['poster'], 'poster.php?') !== 0) {
+            $result['poster_source'] = $result['poster'];
+            $result['poster'] = 'poster.php?key=' . $cacheKey;
+        }
         return $result;
     }
 

@@ -157,8 +157,6 @@ function loadPosterBatch(posterImages, startIndex, batchSize) {
         .then(function(data) {
           if (data.found && data.poster) {
             img.src = data.poster;
-            img.onclick = function() { showPosterModal(data, query); };
-            img.style.cursor = 'pointer';
             var fallback = img.parentElement.querySelector('.poster-fallback');
             if (fallback) fallback.style.display = 'none';
           } else {
@@ -367,6 +365,7 @@ function initExplorerBrowser() {
   var next = document.getElementById('explorerNext');
   var pageInfo = document.getElementById('explorerPageInfo');
   var count = document.getElementById('explorerItemCount');
+  var selectAllBtn = document.getElementById('selectAllFilteredBtn');
   var page = 1;
   var perPage = 20;
 
@@ -395,6 +394,13 @@ function initExplorerBrowser() {
   if (previous) previous.addEventListener('click', function() { if (page > 1) { page--; render(); } });
   if (next) next.addEventListener('click', function() {
     if (page < Math.ceil(filteredItems().length / perPage)) { page++; render(); }
+  });
+  if (selectAllBtn) selectAllBtn.addEventListener('click', function() {
+    filteredItems().forEach(function(item) {
+      var checkbox = item.querySelector('.item-checkbox');
+      if (checkbox) checkbox.checked = true;
+    });
+    updateSelectionBar();
   });
 
   if (document.getElementById('gridViewBtn')) {

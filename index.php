@@ -361,6 +361,9 @@ include __DIR__ . '/views/layouts/main-header.php';
         <span class="input-group-text"><i class="bi bi-search"></i></span>
         <input type="search" class="form-control" id="explorerSearch" placeholder="Cerca per nom…" autocomplete="off">
     </div>
+    <button class="btn btn-sm btn-outline-secondary" type="button" id="selectAllFilteredBtn" title="Selecciona tots els elements filtrats">
+        <i class="bi bi-check2-square"></i> Selecciona-ho tot
+    </button>
     <div class="d-flex gap-2 ms-auto">
         <button class="btn btn-sm btn-outline-success d-none" type="button" id="pasteClipboardBtn" onclick="pasteClipboard()" title="Enganxa aquí">
             <i class="bi bi-clipboard-check"></i> <span id="pasteClipboardLabel">Enganxa</span>

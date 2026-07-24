@@ -45,6 +45,15 @@ class FileCache
             && ($data['plot_lang'] ?? 'ca') === 'ca';
     }
 
+    public static function clear()
+    {
+        $count = 0;
+        foreach (glob(STORAGE_DIR . '/cache/imdb/*.json') as $file) {
+            if (is_file($file) && @unlink($file)) $count++;
+        }
+        return $count;
+    }
+
     private static function ttlFor($data)
     {
         if (self::isComplete($data)) return self::COMPLETE_TTL;
