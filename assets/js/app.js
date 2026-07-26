@@ -384,8 +384,23 @@ function initExplorerBrowser() {
   var pageInfo = document.getElementById('explorerPageInfo');
   var count = document.getElementById('explorerItemCount');
   var selectAllBtn = document.getElementById('selectAllFilteredBtn');
-  var page = 1;
+  // La página actual se guarda en la URL (?page=N) para que acciones que
+  // recargan la página entera (eliminar, moure, enganxar — ver
+  // submitHiddenForm, que reenvía a window.location.href) no te devuelvan
+  // siempre a la página 1: al recargar, initExplorerBrowser() la vuelve a leer.
+  var initialPage = parseInt(new URLSearchParams(window.location.search).get('page'), 10);
+  var page = (initialPage && initialPage > 0) ? initialPage : 1;
   var perPage = 20;
+
+  function syncPageInUrl() {
+    var url = new URL(window.location.href);
+    if (page > 1) {
+      url.searchParams.set('page', page);
+    } else {
+      url.searchParams.delete('page');
+    }
+    history.replaceState(null, '', url);
+  }
 
   function filteredItems() {
     var term = search ? search.value.toLocaleLowerCase('ca').trim() : '';
@@ -398,6 +413,7 @@ function initExplorerBrowser() {
     var filtered = filteredItems();
     var totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
     page = Math.min(page, totalPages);
+    syncPageInUrl();
     items.forEach(function(item) { item.classList.add('d-none'); });
     var visible = filtered.slice((page - 1) * perPage, page * perPage);
     visible.forEach(function(item) { item.classList.remove('d-none'); });
