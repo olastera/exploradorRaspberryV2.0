@@ -120,6 +120,8 @@ node --check assets/js/app.js
 
 Si se toca `$pageScript` (JS embebido en PHP) en `index.php`, `dashboard.php` o `conversiones.php`, `php -l` **no detecta errores de sintaxis en el JS generado**. Renderizar la página (por ejemplo incluyéndola desde CLI con una sesión simulada), extraer el contenido entre `<script>...</script>` y pasarlo por `node --check` antes de dar el cambio por bueno.
 
+**Si se toca `assets/js/app.js` o `assets/css/app.css`, subir el número de versión** de su `<script src="assets/js/app.js?v=N">` / `<link href="assets/css/app.css?v=N">` correspondiente (`views/layouts/main-footer.php` para JS; buscar `app.css?v=` para los `<link>`, hay varios: login, layout principal...). Es la única forma de invalidar la caché del navegador — sin subir `v=N` un usuario que ya visitó la app se queda con el JS/CSS viejo indefinidamente aunque el servidor sirva el archivo nuevo en la misma URL, y el síntoma es confuso (funciona en pestaña nueva/incógnito, no en la sesión ya abierta; o, como pasó el 2026-07-26, "el modal funciona pero el listado no" porque el modal usa una función sin tocar y el listado depende de la función nueva que el JS cacheado no tiene). `node --check` no detecta esto porque el archivo en disco sí es válido — es puramente un problema de caché del navegador.
+
 Comprobar además, según el cambio:
 
 - Inicio y cierre de sesión, y timeout de sesión si se toca `Auth`.
