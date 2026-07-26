@@ -10,6 +10,7 @@ use App\Media\PosterCache;
 use App\Media\Thumbnailer;
 use App\System\Dashboard;
 use App\System\Settings;
+use App\System\TransmissionService;
 
 $currentUser = Auth::requireAuth();
 if ($currentUser['role'] !== 'admin') { header('Location: index.php'); exit; }
@@ -34,6 +35,17 @@ if (isset($_GET['movies_refresh_status'])) {
     header('Content-Type: application/json');
     header('Cache-Control: no-store');
     echo json_encode(MoviesRefreshJob::status());
+    exit;
+}
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['kill_pid'])) {
+    header('Content-Type: application/json');
+    header('Cache-Control: no-store');
+    if (!Csrf::verify($_POST['csrf_token'] ?? '')) {
+        http_response_code(403);
+        echo json_encode(['ok' => false, 'error' => 'El testimoni de seguretat no és vàlid.']);
+        exit;
+    }
+    echo json_encode(Dashboard::killProcess($_POST['kill_pid']));
     exit;
 }
 
@@ -87,6 +99,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ? "S'ha iniciat l'actualització d'informació i carátulas de pel·lícules en segon pla."
             : 'Ja hi ha una actualització en curs.';
         $adminMessageType = $started ? 'success' : 'warning';
+    } elseif (isset($_POST['transmission_start'])) {
+        $ok = TransmissionService::start();
+        $adminMessage = $ok ? "S'ha activat el dimoni de Transmission." : "No s'ha pogut activar Transmission.";
+        $adminMessageType = $ok ? 'success' : 'danger';
+    } elseif (isset($_POST['transmission_stop'])) {
+        $ok = TransmissionService::stop();
+        $adminMessage = $ok ? "S'ha desactivat el dimoni de Transmission." : "No s'ha pogut desactivar Transmission.";
+        $adminMessageType = $ok ? 'success' : 'danger';
     }
 }
 
@@ -301,6 +321,27 @@ include __DIR__ . '/views/layouts/main-header.php';
                 </div>
             </div>
         </div>
+        <?php $transmissionActive = TransmissionService::isActive(); ?>
+        <div class="card-custom mt-3 p-3">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <div class="d-flex align-items-center gap-2">
+                        <i aria-hidden="true" class="bi bi-magnet text-<?php echo $transmissionActive ? 'success' : 'muted'; ?>"></i>
+                        <span class="fw-bold">Transmission</span>
+                        <span class="badge bg-<?php echo $transmissionActive ? 'success' : 'secondary'; ?>"><?php echo $transmissionActive ? 'Actiu' : 'Aturat'; ?></span>
+                    </div>
+                    <div class="small text-muted mt-1">Dimoni de BitTorrent (transmission-daemon).</div>
+                </div>
+                <form method="post">
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken, ENT_QUOTES); ?>">
+                    <?php if ($transmissionActive): ?>
+                        <button class="btn btn-sm btn-outline-danger" type="submit" name="transmission_stop" value="1" onclick="return confirm('Vols aturar el dimoni de Transmission? Es pararan totes les descàrregues en curs.');"><i class="bi bi-stop-fill me-1"></i>Atura</button>
+                    <?php else: ?>
+                        <button class="btn btn-sm btn-outline-success" type="submit" name="transmission_start" value="1"><i class="bi bi-play-fill me-1"></i>Activa</button>
+                    <?php endif; ?>
+                </form>
+            </div>
+        </div>
         <div class="card-custom mt-3 overflow-hidden">
             <div class="d-flex justify-content-between align-items-center p-3 border-bottom" style="border-color:var(--border)!important">
                 <h5 class="mb-0"><i class="bi bi-terminal me-2 text-success"></i>Processos actius</h5>
@@ -315,10 +356,11 @@ include __DIR__ . '/views/layouts/main-header.php';
                             <th class="text-end">CPU</th>
                             <th class="text-end">Memòria</th>
                             <th class="text-end">Temps actiu</th>
+                            <th class="text-end">Accions</th>
                         </tr>
                     </thead>
                     <tbody id="processTableBody">
-                        <tr><td colspan="5" class="text-center text-muted py-4">Obre la pestanya Sistema per carregar els processos.</td></tr>
+                        <tr><td colspan="6" class="text-center text-muted py-4">Obre la pestanya Sistema per carregar els processos.</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -512,7 +554,7 @@ function refreshProcesses() {
             if (!processes.length) {
                 var emptyRow = body.insertRow();
                 var emptyCell = emptyRow.insertCell();
-                emptyCell.colSpan = 5;
+                emptyCell.colSpan = 6;
                 emptyCell.className = "text-center text-muted py-4";
                 emptyCell.textContent = "No s’han pogut obtenir els processos.";
                 return;
@@ -532,7 +574,40 @@ function refreshProcesses() {
                     if (index >= 2) cell.className = "text-end";
                     if (index === 1) cell.className = "process-command";
                 });
+                var actionCell = row.insertCell();
+                actionCell.className = "text-end";
+                var killBtn = document.createElement("button");
+                killBtn.type = "button";
+                killBtn.className = "btn btn-sm btn-outline-danger";
+                killBtn.title = "Mata el procés";
+                killBtn.innerHTML = "<i class=\"bi bi-x-lg\"></i>";
+                killBtn.addEventListener("click", function() {
+                    killProcess(process.pid, process.command, killBtn);
+                });
+                actionCell.appendChild(killBtn);
             });
+        });
+}
+
+function killProcess(pid, command, button) {
+    if (!confirm("Vols matar el procés " + pid + " (" + command + ")? Aquesta acció no es pot desfer.")) return;
+    button.disabled = true;
+    var form = new FormData();
+    form.append("kill_pid", pid);
+    form.append("csrf_token", csrfToken || "");
+    fetch("dashboard.php", { method: "POST", body: form })
+        .then(function(r) { return r.json(); })
+        .then(function(result) {
+            if (!result.ok) {
+                alert(result.error || "No s’ha pogut matar el procés.");
+                button.disabled = false;
+                return;
+            }
+            refreshProcesses();
+        })
+        .catch(function() {
+            alert("No s’ha pogut matar el procés.");
+            button.disabled = false;
         });
 }
 document.querySelectorAll("[data-bs-toggle=\"tab\"]").forEach(function(tab) {

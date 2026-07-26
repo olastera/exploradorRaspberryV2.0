@@ -48,6 +48,47 @@ class Dashboard
         return $processes;
     }
 
+    // Procesos que el botón "Mata" de Sistema > Processos actius nunca puede
+    // tocar, aunque el usuario confirme el diálogo del navegador: matarlos
+    // tumbaría la propia app (apache2), el acceso remoto (sshd) o el sistema
+    // (systemd). Comparación por prefijo porque `ps -eo comm=` trunca a 15
+    // caracteres (p.ej. "transmission-da"), así que un nombre real más largo
+    // que empiece por uno de estos también queda protegido.
+    private const PROTECTED_COMMANDS = [
+        'apache2', 'httpd', 'sshd', 'systemd', 'init',
+        'php-fpm', 'mysqld', 'mariadbd', 'cron',
+    ];
+
+    // Vuelve a comprobar el nombre del proceso en el momento de matar (nunca
+    // se confía en el nombre que mandó el navegador) para evitar que un PID
+    // reciclado por el sistema entre el listado y el clic acabe matando un
+    // proceso crítico distinto del que el usuario vio en pantalla.
+    public static function killProcess($pid)
+    {
+        $pid = (int) $pid;
+        if ($pid <= 1) {
+            return ['ok' => false, 'error' => 'PID no vàlid.'];
+        }
+
+        $comm = trim((string) @shell_exec('ps -p ' . escapeshellarg((string) $pid) . ' -o comm= 2>/dev/null'));
+        if ($comm === '') {
+            return ['ok' => false, 'error' => 'El procés ja no existeix.'];
+        }
+        foreach (self::PROTECTED_COMMANDS as $protected) {
+            if (stripos($comm, $protected) === 0) {
+                return ['ok' => false, 'error' => "«{$comm}» és un procés crític protegit; no es pot matar des d'aquí."];
+            }
+        }
+
+        @shell_exec('sudo -n /usr/bin/kill -9 ' . escapeshellarg((string) $pid) . ' 2>&1');
+        usleep(300000);
+        $stillAlive = trim((string) @shell_exec('ps -p ' . escapeshellarg((string) $pid) . ' -o pid= 2>/dev/null')) !== '';
+
+        return $stillAlive
+            ? ['ok' => false, 'error' => "No s'ha pogut matar el procés (potser falta el permís sudo)."]
+            : ['ok' => true, 'error' => null];
+    }
+
     private static function getUptime() {
         $uptime = @shell_exec('uptime -p 2>/dev/null');
         return $uptime ? trim($uptime) : 'N/A';
