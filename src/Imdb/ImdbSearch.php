@@ -161,17 +161,10 @@ class ImdbSearch
                 if (!empty($result['plot'])) {
                     $result['plot_lang'] = 'en';
                     $plotToTranslate = substr($result['plot'], 0, 500);
-                    $mmUrl = "https://api.mymemory.translated.net/get?q=" . rawurlencode($plotToTranslate) . "&langpair=en|ca";
-                    $mmResponse = @file_get_contents($mmUrl, false, $ctx);
-                    if ($mmResponse !== false) {
-                        $mmData = json_decode($mmResponse, true);
-                        $translated = $mmData['responseData']['translatedText'] ?? '';
-                        $quotaExceeded = (isset($mmData['responseStatus']) && (int) $mmData['responseStatus'] !== 200)
-                            || stripos($translated, 'MYMEMORY WARNING') !== false;
-                        if ($translated !== '' && !$quotaExceeded) {
-                            $result['plot'] = $translated;
-                            $result['plot_lang'] = 'ca';
-                        }
+                    $translated = self::translateToCatalan($plotToTranslate, $ctx);
+                    if ($translated !== null) {
+                        $result['plot'] = $translated;
+                        $result['plot_lang'] = 'ca';
                     }
                 }
                 $cacheKey = md5('ca|' . strtolower(self::cleanQuery($result['title'])));
@@ -179,5 +172,46 @@ class ImdbSearch
             }
         }
         return $result;
+    }
+
+    // Traduce al català con el endpoint no oficial de Google Translate primero
+    // (sin API key, sin cuota diaria visible para este volumen de uso: unas
+    // pocas películas nuevas al día). MyMemory queda como reserva por si Google
+    // fallara — su cuota gratis (~5.000 palabras/día) se agotaba casi a diario
+    // usándolo como único traductor, así que ya no es la vía principal.
+    private static function translateToCatalan($text, $ctx)
+    {
+        $translated = self::translateViaGoogle($text, $ctx);
+        if ($translated !== null) return $translated;
+        return self::translateViaMyMemory($text, $ctx);
+    }
+
+    private static function translateViaGoogle($text, $ctx)
+    {
+        $url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=ca&dt=t&q=' . rawurlencode($text);
+        $response = @file_get_contents($url, false, $ctx);
+        if ($response === false) return null;
+
+        $data = json_decode($response, true);
+        if (!is_array($data) || empty($data[0]) || !is_array($data[0])) return null;
+
+        $translated = '';
+        foreach ($data[0] as $segment) {
+            if (isset($segment[0])) $translated .= $segment[0];
+        }
+        return $translated !== '' ? $translated : null;
+    }
+
+    private static function translateViaMyMemory($text, $ctx)
+    {
+        $mmUrl = 'https://api.mymemory.translated.net/get?q=' . rawurlencode($text) . '&langpair=en|ca';
+        $mmResponse = @file_get_contents($mmUrl, false, $ctx);
+        if ($mmResponse === false) return null;
+
+        $mmData = json_decode($mmResponse, true);
+        $translated = $mmData['responseData']['translatedText'] ?? '';
+        $quotaExceeded = (isset($mmData['responseStatus']) && (int) $mmData['responseStatus'] !== 200)
+            || stripos($translated, 'MYMEMORY WARNING') !== false;
+        return ($translated !== '' && !$quotaExceeded) ? $translated : null;
     }
 }
