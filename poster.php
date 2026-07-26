@@ -15,6 +15,11 @@ if ($cachedPath !== null) {
     exit;
 }
 
+if (PosterCache::isRecentlyFailed($key)) {
+    http_response_code(404);
+    die('Poster not found');
+}
+
 $metaFile = STORAGE_DIR . '/cache/imdb/' . $key . '.json';
 $meta = is_file($metaFile) ? json_decode((string) file_get_contents($metaFile), true) : null;
 $sourceUrl = is_array($meta) ? ($meta['poster_source'] ?? null) : null;
@@ -26,8 +31,9 @@ if (empty($sourceUrl)) {
 
 $downloaded = PosterCache::download($sourceUrl);
 if ($downloaded === null) {
-    header('Location: ' . $sourceUrl);
-    exit;
+    PosterCache::markFailed($key);
+    http_response_code(404);
+    die('Poster not found');
 }
 
 $savedPath = PosterCache::store($key, $downloaded['bytes'], $downloaded['contentType']);

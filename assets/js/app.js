@@ -144,6 +144,24 @@ function showMovieInfo(query) {
     });
 }
 
+// Carga carátulas/info solo de las tarjetas visibles de la página actual (ver
+// initExplorerBrowser). Antes se pedían las de toda la carpeta de golpe aunque
+// solo se vieran 20, lo que disparaba decenas de peticiones a imdb_search.php
+// en cada carga de la galería. img.dataset.loaded (puesto por loadPosterBatch)
+// evita volver a pedir una carátula ya cargada al cambiar de página y volver.
+function loadVisiblePosters(items) {
+  var posterImages = items
+    .map(function(item) { return item.querySelector('.poster-thumb[data-query]'); })
+    .filter(function(img) { return img && !img.dataset.loaded; });
+  for (var start = 0; start < posterImages.length; start += 5) {
+    (function(start) {
+      setTimeout(function() {
+        loadPosterBatch(posterImages, start, 5);
+      }, (start / 5) * 250);
+    })(start);
+  }
+}
+
 // Ajax batch poster loading
 function loadPosterBatch(posterImages, startIndex, batchSize) {
   batchSize = batchSize || 5;
@@ -381,9 +399,9 @@ function initExplorerBrowser() {
     var totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
     page = Math.min(page, totalPages);
     items.forEach(function(item) { item.classList.add('d-none'); });
-    filtered.slice((page - 1) * perPage, page * perPage).forEach(function(item) {
-      item.classList.remove('d-none');
-    });
+    var visible = filtered.slice((page - 1) * perPage, page * perPage);
+    visible.forEach(function(item) { item.classList.remove('d-none'); });
+    loadVisiblePosters(visible);
     if (pageInfo) pageInfo.textContent = 'Pàgina ' + page + ' de ' + totalPages;
     if (count) count.textContent = filtered.length + ' elements';
     if (previous) previous.disabled = page <= 1;

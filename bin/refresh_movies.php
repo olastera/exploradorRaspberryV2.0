@@ -64,18 +64,29 @@ function ensurePosterDownloaded($result)
     if (!preg_match('/^poster\.php\?key=([a-f0-9]{32})$/', $result['poster'], $m)) return;
 
     $key = $m[1];
-    if (PosterCache::find($key) !== null) return;
+    if (PosterCache::find($key) !== null || PosterCache::isRecentlyFailed($key)) return;
 
     $downloaded = PosterCache::download($result['poster_source']);
     if ($downloaded !== null) {
         PosterCache::store($key, $downloaded['bytes'], $downloaded['contentType']);
+    } else {
+        PosterCache::markFailed($key);
     }
+}
+
+// Evita que el cron nocturno y el botón manual de Administración corran a la
+// vez (pisarían el mismo fichero de estado y duplicarían peticiones a las APIs
+// externas). Si ya hay un proceso vivo, este simplemente no hace nada.
+$existing = readStatus($statusFile);
+if (!empty($existing['running']) && !empty($existing['pid']) && file_exists('/proc/' . (int) $existing['pid'])) {
+    exit(0);
 }
 
 $root = FileExplorer::getLibraryRoot('movies');
 $names = array_values(array_unique(collectMovieNames($root)));
 
 $status = readStatus($statusFile);
+$status['pid'] = getmypid();
 $status['running'] = true;
 $status['total'] = count($names);
 $status['processed'] = 0;
@@ -87,7 +98,7 @@ foreach ($names as $name) {
     writeStatus($statusFile, $status);
 
     try {
-        $result = ImdbSearch::search($name);
+        $result = ImdbSearch::refresh($name);
         ensurePosterDownloaded($result);
     } catch (\Throwable $e) {
         $status['error'] = $name . ': ' . $e->getMessage();

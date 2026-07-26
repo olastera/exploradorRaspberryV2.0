@@ -456,14 +456,6 @@ include __DIR__ . '/views/layouts/main-header.php';
 ob_start();
 ?>
 document.addEventListener('DOMContentLoaded', function() {
-<?php if ($library === 'movies'): ?>
-    var posterImages = document.querySelectorAll('.poster-thumb[data-query]');
-    for (let start = 0; start < posterImages.length; start += 5) {
-        setTimeout(function() {
-            loadPosterBatch(posterImages, start, 5);
-        }, (start / 5) * 250);
-    }
-<?php endif; ?>
     initExplorerBrowser();
     updatePasteButton();
 });

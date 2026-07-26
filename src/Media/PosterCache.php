@@ -3,6 +3,12 @@ namespace App\Media;
 
 class PosterCache
 {
+    // Si la descarga de una carátula falla (enlace muerto, CDN caído...) no
+    // reintentamos en cada petición: eso convertía cada visita a esa película en
+    // una espera de hasta 5s. Se marca como fallida durante este tiempo y se
+    // reintenta más tarde (o cuando el job de refresco vuelva a pasar).
+    const FAIL_TTL = 86400; // 1 day
+
     private static function directory()
     {
         $dir = STORAGE_DIR . '/cache/posters';
@@ -12,8 +18,26 @@ class PosterCache
 
     public static function find($key)
     {
-        $matches = glob(self::directory() . '/' . $key . '.*');
-        return $matches ? $matches[0] : null;
+        foreach (glob(self::directory() . '/' . $key . '.*') as $match) {
+            if (substr($match, -5) !== '.fail') return $match;
+        }
+        return null;
+    }
+
+    public static function isRecentlyFailed($key)
+    {
+        $file = self::directory() . '/' . $key . '.fail';
+        if (!is_file($file)) return false;
+        if ((time() - filemtime($file)) > self::FAIL_TTL) {
+            @unlink($file);
+            return false;
+        }
+        return true;
+    }
+
+    public static function markFailed($key)
+    {
+        file_put_contents(self::directory() . '/' . $key . '.fail', (string) time(), LOCK_EX);
     }
 
     public static function download($url)

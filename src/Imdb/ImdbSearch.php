@@ -3,24 +3,53 @@ namespace App\Imdb;
 
 class ImdbSearch
 {
+    // Usado por peticiones en vivo (imdb_search.php, disparadas desde el navegador
+    // de cada usuario). Si ya hay algo en caché (aunque la traducción al catalán
+    // siga pendiente) lo devuelve tal cual: nunca llama a IMDb/OMDb/MyMemory desde
+    // aquí, para que cargar la galería no dependa de APIs externas lentas o con
+    // cuota agotada. Esos reintentos los hace solo refresh(), en segundo plano.
     public static function search($query)
     {
         if (empty(trim($query))) return ['found' => false];
 
-        $cacheKey = md5('ca|' . strtolower(self::cleanQuery($query)));
-
+        $cacheKey = self::cacheKey($query);
         $cached = FileCache::get($cacheKey);
         if ($cached !== null) {
-            if (FileCache::isComplete($cached) || empty($cached['imdb_id'])) {
-                $migrated = self::withLocalPoster($cacheKey, $cached);
-                if ($migrated !== $cached) FileCache::set($cacheKey, $migrated);
-                return $migrated;
-            }
-            $enriched = self::withLocalPoster($cacheKey, self::enrichFromOmdb($cached));
-            FileCache::set($cacheKey, $enriched);
-            return $enriched;
+            return self::finalize($cacheKey, $cached);
         }
 
+        return self::fetchAndCache($query, $cacheKey);
+    }
+
+    // Usado solo por bin/refresh_movies.php (job en segundo plano, vía cron o el
+    // botón de Administración). A diferencia de search(), sí reintenta OMDb/la
+    // traducción para entradas que están en caché pero incompletas (p.ej. porque
+    // la cuota diaria de MyMemory estaba agotada la última vez).
+    public static function refresh($query)
+    {
+        if (empty(trim($query))) return ['found' => false];
+
+        $cacheKey = self::cacheKey($query);
+        $cached = FileCache::get($cacheKey);
+        if ($cached === null) {
+            return self::fetchAndCache($query, $cacheKey);
+        }
+        if (FileCache::isComplete($cached) || empty($cached['imdb_id'])) {
+            return self::finalize($cacheKey, $cached);
+        }
+
+        $enriched = self::enrichFromOmdb($cached);
+        FileCache::set($cacheKey, $enriched);
+        return self::finalize($cacheKey, $enriched);
+    }
+
+    private static function cacheKey($query)
+    {
+        return md5('ca|' . strtolower(self::cleanQuery($query)));
+    }
+
+    private static function fetchAndCache($query, $cacheKey)
+    {
         $result = self::searchImdb($query);
         if ($result['found']) {
             $result = self::enrichFromOmdb($result);
@@ -28,6 +57,14 @@ class ImdbSearch
         $result = self::withLocalPoster($cacheKey, $result);
         FileCache::set($cacheKey, $result);
         return $result;
+    }
+
+    // Migra el póster a poster.php si hace falta y persiste el cambio.
+    private static function finalize($cacheKey, $result)
+    {
+        $migrated = self::withLocalPoster($cacheKey, $result);
+        if ($migrated !== $result) FileCache::set($cacheKey, $migrated);
+        return $migrated;
     }
 
     // Sustituye la URL remota del póster por un proxy local (poster.php) para que
